@@ -8,6 +8,7 @@ RUN mvn clean package -DskipTests
 # Run Stage
 FROM eclipse-temurin:17-jdk-jammy
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+# Use the specific JAR name from pom.xml
+COPY --from=build /app/target/gym-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
