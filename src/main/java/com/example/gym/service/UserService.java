@@ -2,17 +2,19 @@ package com.example.gym.service;
 
 import com.example.gym.entity.User;
 import com.example.gym.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     /** Register a new user (account creation) */
     public User registerUser(User user) {

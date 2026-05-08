@@ -2,7 +2,6 @@ package com.example.gym.controller;
 
 import com.example.gym.entity.Payment;
 import com.example.gym.service.PaymentService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,10 +10,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payments")
-@RequiredArgsConstructor
 public class PaymentController {
 
     private final PaymentService paymentService;
+
+    public PaymentController(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
 
     /** POST /api/payments/user/{userId} — Add payment for a user */
     @PostMapping("/user/{userId}")

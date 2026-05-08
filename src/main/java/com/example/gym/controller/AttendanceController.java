@@ -2,7 +2,6 @@ package com.example.gym.controller;
 
 import com.example.gym.entity.Attendance;
 import com.example.gym.service.AttendanceService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,10 +12,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/attendance")
-@RequiredArgsConstructor
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
+
+    public AttendanceController(AttendanceService attendanceService) {
+        this.attendanceService = attendanceService;
+    }
 
     /** POST /api/attendance/user/{userId} — Mark attendance (check-in) */
     @PostMapping("/user/{userId}")

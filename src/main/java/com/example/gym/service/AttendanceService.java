@@ -4,18 +4,21 @@ import com.example.gym.entity.Attendance;
 import com.example.gym.entity.User;
 import com.example.gym.repository.AttendanceRepository;
 import com.example.gym.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
     private final UserRepository userRepository;
+
+    public AttendanceService(AttendanceRepository attendanceRepository, UserRepository userRepository) {
+        this.attendanceRepository = attendanceRepository;
+        this.userRepository = userRepository;
+    }
 
     /** Mark attendance (check-in) for a user */
     public Attendance markAttendance(Long userId, Attendance attendance) {

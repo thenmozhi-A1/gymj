@@ -4,17 +4,20 @@ import com.example.gym.entity.Payment;
 import com.example.gym.entity.User;
 import com.example.gym.repository.PaymentRepository;
 import com.example.gym.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
+
+    public PaymentService(PaymentRepository paymentRepository, UserRepository userRepository) {
+        this.paymentRepository = paymentRepository;
+        this.userRepository = userRepository;
+    }
 
     /** Save a new payment record for a user */
     public Payment addPayment(Long userId, Payment payment) {

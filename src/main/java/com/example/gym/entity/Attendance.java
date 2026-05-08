@@ -1,39 +1,39 @@
 package com.example.gym.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
 @Table(name = "attendance")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Attendance {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Link to the user
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     private LocalDate attendanceDate;
-
     private LocalTime checkInTime;
-
     private LocalTime checkOutTime;
-
-    // "PRESENT" / "ABSENT"
     private String status;
+    private String notes;
 
-    private String notes; // Optional notes by trainer/admin
+    public Attendance() {}
+
+    public Attendance(Long id, User user, LocalDate attendanceDate, LocalTime checkInTime, LocalTime checkOutTime, String status, String notes) {
+        this.id = id;
+        this.user = user;
+        this.attendanceDate = attendanceDate;
+        this.checkInTime = checkInTime;
+        this.checkOutTime = checkOutTime;
+        this.status = status;
+        this.notes = notes;
+    }
 
     @PrePersist
     public void prePersist() {
@@ -41,4 +41,20 @@ public class Attendance {
         if (this.checkInTime == null) this.checkInTime = LocalTime.now();
         if (this.status == null) this.status = "PRESENT";
     }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+    public LocalDate getAttendanceDate() { return attendanceDate; }
+    public void setAttendanceDate(LocalDate attendanceDate) { this.attendanceDate = attendanceDate; }
+    public LocalTime getCheckInTime() { return checkInTime; }
+    public void setCheckInTime(LocalTime checkInTime) { this.checkInTime = checkInTime; }
+    public LocalTime getCheckOutTime() { return checkOutTime; }
+    public void setCheckOutTime(LocalTime checkOutTime) { this.checkOutTime = checkOutTime; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }

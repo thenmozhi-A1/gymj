@@ -12,16 +12,18 @@ public class DataInitializer {
     @Bean
     public CommandLineRunner initData(UserRepository userRepository) {
         return args -> {
-            // Check if admin already exists
-            if (userRepository.findAll().stream().noneMatch(u -> "admin@gym.com".equals(u.getEmail()))) {
+            String adminEmail = "admin@gym.com";
+            if (!userRepository.existsByEmail(adminEmail)) {
                 User admin = new User();
-                admin.setFullName("admin");
-                admin.setEmail("admin@gym.com");
+                admin.setFullName("Gym Admin");
+                admin.setEmail(adminEmail);
                 admin.setPassword("admin");
                 admin.setRole("ADMIN");
                 admin.setStatus("ACTIVE");
                 userRepository.save(admin);
-                System.out.println("✅ Admin account created: admin@gym.com / admin");
+                System.out.println("✅ Default Admin account created: " + adminEmail + " / admin");
+            } else {
+                System.out.println("ℹ️ Admin account already exists.");
             }
         };
     }
