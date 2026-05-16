@@ -28,12 +28,21 @@ public class User {
     private String status;
     private String role;
 
+    // Staff-specific fields
+    private String salary;
+    private String times;
+    private String specialty;
+    private Integer leaves = 0;
+    private Integer permissions = 0;
+    private String fingerprintHash;
+    private Boolean fingerprintEnrolled = false;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
     public User() {}
 
-    public User(Long id, String fullName, String email, String password, String phone, String address, String gender, String membershipType, String status, String role, LocalDateTime createdAt) {
+    public User(Long id, String fullName, String email, String password, String phone, String address, String gender, String membershipType, String status, String role, String salary, String times, String specialty, Integer leaves, Integer permissions, String fingerprintHash, Boolean fingerprintEnrolled, LocalDateTime createdAt) {
         this.id = id;
         this.fullName = fullName;
         this.email = email;
@@ -44,6 +53,13 @@ public class User {
         this.membershipType = membershipType;
         this.status = status;
         this.role = role;
+        this.salary = salary;
+        this.times = times;
+        this.specialty = specialty;
+        this.leaves = leaves;
+        this.permissions = permissions;
+        this.fingerprintHash = fingerprintHash;
+        this.fingerprintEnrolled = fingerprintEnrolled;
         this.createdAt = createdAt;
     }
 
@@ -52,6 +68,9 @@ public class User {
         this.createdAt = LocalDateTime.now();
         if (this.status == null) this.status = "ACTIVE";
         if (this.role == null) this.role = "USER";
+        if (this.leaves == null) this.leaves = 0;
+        if (this.permissions == null) this.permissions = 0;
+        if (this.fingerprintEnrolled == null) this.fingerprintEnrolled = false;
     }
 
     // Getters and Setters
@@ -75,6 +94,20 @@ public class User {
     public void setStatus(String status) { this.status = status; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+    public String getSalary() { return salary; }
+    public void setSalary(String salary) { this.salary = salary; }
+    public String getTimes() { return times; }
+    public void setTimes(String times) { this.times = times; }
+    public String getSpecialty() { return specialty; }
+    public void setSpecialty(String specialty) { this.specialty = specialty; }
+    public Integer getLeaves() { return leaves; }
+    public void setLeaves(Integer leaves) { this.leaves = leaves; }
+    public Integer getPermissions() { return permissions; }
+    public void setPermissions(Integer permissions) { this.permissions = permissions; }
+    public String getFingerprintHash() { return fingerprintHash; }
+    public void setFingerprintHash(String fingerprintHash) { this.fingerprintHash = fingerprintHash; }
+    public Boolean getFingerprintEnrolled() { return fingerprintEnrolled; }
+    public void setFingerprintEnrolled(Boolean fingerprintEnrolled) { this.fingerprintEnrolled = fingerprintEnrolled; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

@@ -58,6 +58,14 @@ public class UserService {
         existing.setGender(updatedUser.getGender());
         existing.setMembershipType(updatedUser.getMembershipType());
         existing.setStatus(updatedUser.getStatus());
+        existing.setRole(updatedUser.getRole());
+        existing.setSalary(updatedUser.getSalary());
+        existing.setTimes(updatedUser.getTimes());
+        existing.setSpecialty(updatedUser.getSpecialty());
+        existing.setLeaves(updatedUser.getLeaves());
+        existing.setPermissions(updatedUser.getPermissions());
+        existing.setFingerprintHash(updatedUser.getFingerprintHash());
+        existing.setFingerprintEnrolled(updatedUser.getFingerprintEnrolled());
         return userRepository.save(existing);
     }
 
