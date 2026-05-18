@@ -5,13 +5,41 @@ import com.example.gym.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Configuration
 public class DataInitializer {
 
     @Bean
-    public CommandLineRunner initData(UserRepository userRepository) {
+    public CommandLineRunner initData(UserRepository userRepository, JdbcTemplate jdbcTemplate) {
         return args -> {
+            // Guarantee 'staffs' table exists in database
+            try {
+                jdbcTemplate.execute(
+                    "CREATE TABLE IF NOT EXISTS staffs (" +
+                    "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                    "full_name VARCHAR(255) NOT NULL, " +
+                    "email VARCHAR(255) NOT NULL UNIQUE, " +
+                    "password VARCHAR(255) NOT NULL, " +
+                    "phone VARCHAR(255), " +
+                    "address VARCHAR(255), " +
+                    "role VARCHAR(255), " +
+                    "salary VARCHAR(255), " +
+                    "times VARCHAR(255), " +
+                    "specialty VARCHAR(255), " +
+                    "leaves INT DEFAULT 0, " +
+                    "permissions INT DEFAULT 0, " +
+                    "fingerprint_hash VARCHAR(255), " +
+                    "fingerprint_enrolled BOOLEAN DEFAULT FALSE, " +
+                    "status VARCHAR(255) DEFAULT 'ACTIVE', " +
+                    "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ") ENGINE=InnoDB"
+                );
+                System.out.println("✅ Database table 'staffs' checked/created successfully.");
+            } catch (Exception e) {
+                System.err.println("❌ Failed to verify/create 'staffs' table: " + e.getMessage());
+            }
+
             String adminEmail = "admin@gym.com";
             if (!userRepository.existsByEmail(adminEmail)) {
                 User admin = new User();
