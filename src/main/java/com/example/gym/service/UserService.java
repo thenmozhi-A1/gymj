@@ -2,6 +2,7 @@ package com.example.gym.service;
 
 import com.example.gym.entity.User;
 import com.example.gym.repository.UserRepository;
+import com.example.gym.repository.StaffRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,9 +12,11 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final StaffRepository staffRepository;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, StaffRepository staffRepository) {
         this.userRepository = userRepository;
+        this.staffRepository = staffRepository;
     }
 
     /** Register a new user (account creation) */
@@ -30,12 +33,43 @@ public class UserService {
 
     /** Login - check email + password */
     public User loginUser(String email, String password) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-        if (!user.getPassword().equals(password)) {
-            throw new RuntimeException("Invalid password");
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (!user.getPassword().equals(password)) {
+                throw new RuntimeException("Invalid password");
+            }
+            return user;
         }
-        return user;
+
+        // If not found in User, check Staff table!
+        Optional<com.example.gym.entity.Staff> staffOpt = staffRepository.findByEmail(email);
+        if (staffOpt.isPresent()) {
+            com.example.gym.entity.Staff staff = staffOpt.get();
+            if (!staff.getPassword().equals(password)) {
+                throw new RuntimeException("Invalid password");
+            }
+            // Map Staff to a virtual User object for authentication flow compatibility
+            User user = new User();
+            user.setId(staff.getId());
+            user.setFullName(staff.getFullName());
+            user.setEmail(staff.getEmail());
+            user.setPassword(staff.getPassword());
+            user.setPhone(staff.getPhone());
+            user.setAddress(staff.getAddress());
+            user.setRole(staff.getRole());
+            user.setSalary(staff.getSalary());
+            user.setTimes(staff.getTimes());
+            user.setSpecialty(staff.getSpecialty());
+            user.setLeaves(staff.getLeaves());
+            user.setPermissions(staff.getPermissions());
+            user.setFingerprintHash(staff.getFingerprintHash());
+            user.setFingerprintEnrolled(staff.getFingerprintEnrolled());
+            user.setStatus(staff.getStatus());
+            return user;
+        }
+
+        throw new RuntimeException("User not found with email: " + email);
     }
 
     /** Get all users */
