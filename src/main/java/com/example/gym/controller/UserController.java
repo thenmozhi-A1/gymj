@@ -43,6 +43,18 @@ public class UserController {
         }
     }
 
+    /** POST /api/users/biometric-login — Login with fingerprint hash lookup */
+    @PostMapping("/biometric-login")
+    public ResponseEntity<?> biometricLogin(@RequestBody Map<String, String> body) {
+        try {
+            User user = userService.loginBiometric(body.get("fingerprintHash"));
+            return ResponseEntity.ok(user);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+
     /** GET /api/users — Get all users (admin) */
     @GetMapping
     public List<User> getAllUsers() {

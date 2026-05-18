@@ -72,6 +72,53 @@ public class UserService {
         throw new RuntimeException("User not found with email: " + email);
     }
 
+    /** Biometric Login - check fingerprint hash in both Users and Staffs */
+    public User loginBiometric(String fingerprintHash) {
+        if (fingerprintHash == null || fingerprintHash.trim().isEmpty()) {
+            throw new RuntimeException("Fingerprint hash is required");
+        }
+        
+        // 1. Search in standard members table (User)
+        Optional<User> userOpt = userRepository.findByFingerprintHash(fingerprintHash);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+                throw new RuntimeException("ACCESS DENIED: Membership is not active.");
+            }
+            return user;
+        }
+
+        // 2. Search in separate staffs table (Staff)
+        Optional<com.example.gym.entity.Staff> staffOpt = staffRepository.findByFingerprintHash(fingerprintHash);
+        if (staffOpt.isPresent()) {
+            com.example.gym.entity.Staff staff = staffOpt.get();
+            if (!"ACTIVE".equalsIgnoreCase(staff.getStatus())) {
+                throw new RuntimeException("ACCESS DENIED: Employee status is not active.");
+            }
+            // Map Staff to a virtual User object for authentication flow compatibility
+            User user = new User();
+            user.setId(staff.getId());
+            user.setFullName(staff.getFullName());
+            user.setEmail(staff.getEmail());
+            user.setPassword(staff.getPassword());
+            user.setPhone(staff.getPhone());
+            user.setAddress(staff.getAddress());
+            user.setRole(staff.getRole());
+            user.setSalary(staff.getSalary());
+            user.setTimes(staff.getTimes());
+            user.setSpecialty(staff.getSpecialty());
+            user.setLeaves(staff.getLeaves());
+            user.setPermissions(staff.getPermissions());
+            user.setFingerprintHash(staff.getFingerprintHash());
+            user.setFingerprintEnrolled(staff.getFingerprintEnrolled());
+            user.setStatus(staff.getStatus());
+            return user;
+        }
+
+        throw new RuntimeException("Fingerprint not recognized. Please register or try again.");
+    }
+
+
     /** Get all users */
     public List<User> getAllUsers() {
         return userRepository.findAll();
