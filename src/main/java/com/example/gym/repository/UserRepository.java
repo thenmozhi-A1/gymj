@@ -9,6 +9,6 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
-    Optional<User> findByFingerprintHash(String fingerprintHash);
+    java.util.List<User> findByFingerprintHash(String fingerprintHash);
     boolean existsByEmail(String email);
 }

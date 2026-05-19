@@ -78,66 +78,79 @@ public class UserService {
             throw new RuntimeException("Fingerprint hash is required");
         }
         
-        // 1. Search in standard members table (User) by hash
-        Optional<User> userOpt = userRepository.findByFingerprintHash(fingerprintHash);
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
-                throw new RuntimeException("ACCESS DENIED: Membership is not active.");
-            }
-            return user;
-        }
-
-        // 2. Search in separate staffs table (Staff) by hash
-        Optional<com.example.gym.entity.Staff> staffOpt = staffRepository.findByFingerprintHash(fingerprintHash);
-        if (staffOpt.isPresent()) {
-            com.example.gym.entity.Staff staff = staffOpt.get();
-            if (!"ACTIVE".equalsIgnoreCase(staff.getStatus())) {
-                throw new RuntimeException("ACCESS DENIED: Employee status is not active.");
-            }
-            return mapStaffToUser(staff);
-        }
-
-        // 3. Fallback: Search by email if provided to automatically activate new devices/fingerprints
+        // 1. If email is provided, verify directly by email for maximum reliability and uniqueness
         if (email != null && !email.trim().isEmpty()) {
-            // Check Staff first
-            Optional<com.example.gym.entity.Staff> staffByEmail = staffRepository.findByEmail(email);
-            if (staffByEmail.isPresent()) {
-                com.example.gym.entity.Staff staff = staffByEmail.get();
+            // Check Staff table first
+            Optional<com.example.gym.entity.Staff> staffOpt = staffRepository.findByEmail(email);
+            if (staffOpt.isPresent()) {
+                com.example.gym.entity.Staff staff = staffOpt.get();
                 if (!"ACTIVE".equalsIgnoreCase(staff.getStatus())) {
                     throw new RuntimeException("ACCESS DENIED: Employee status is not active.");
                 }
                 
-                // Update and save new fingerprint hash in staffs table
-                staff.setFingerprintHash(fingerprintHash);
-                staff.setFingerprintEnrolled(true);
-                staffRepository.save(staff);
-                
-                // Also update matching user record if exists
-                Optional<User> userByEmail = userRepository.findByEmail(email);
-                if (userByEmail.isPresent()) {
-                    User u = userByEmail.get();
-                    u.setFingerprintHash(fingerprintHash);
-                    u.setFingerprintEnrolled(true);
-                    userRepository.save(u);
+                String dbHash = staff.getFingerprintHash();
+                // If it's a first time scan (placeholder hash starting with "fp_" or empty) OR the hash matches, let them in!
+                if (dbHash == null || dbHash.trim().isEmpty() || dbHash.startsWith("fp_") || dbHash.equalsIgnoreCase(fingerprintHash)) {
+                    // Update and save new fingerprint hash
+                    staff.setFingerprintHash(fingerprintHash);
+                    staff.setFingerprintEnrolled(true);
+                    staffRepository.save(staff);
+                    
+                    // Sync to User table if exists
+                    Optional<User> userByEmail = userRepository.findByEmail(email);
+                    if (userByEmail.isPresent()) {
+                        User u = userByEmail.get();
+                        u.setFingerprintHash(fingerprintHash);
+                        u.setFingerprintEnrolled(true);
+                        userRepository.save(u);
+                    }
+                    return mapStaffToUser(staff);
+                } else {
+                    throw new RuntimeException("Fingerprint verification failed for " + email);
                 }
-                
-                return mapStaffToUser(staff);
             }
 
-            // Check User standard members
-            Optional<User> userByEmail = userRepository.findByEmail(email);
-            if (userByEmail.isPresent()) {
-                User user = userByEmail.get();
+            // Check User table next
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
                 if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
                     throw new RuntimeException("ACCESS DENIED: Membership is not active.");
                 }
                 
-                user.setFingerprintHash(fingerprintHash);
-                user.setFingerprintEnrolled(true);
-                userRepository.save(user);
-                return user;
+                String dbHash = user.getFingerprintHash();
+                if (dbHash == null || dbHash.trim().isEmpty() || dbHash.startsWith("fp_") || dbHash.equalsIgnoreCase(fingerprintHash)) {
+                    user.setFingerprintHash(fingerprintHash);
+                    user.setFingerprintEnrolled(true);
+                    userRepository.save(user);
+                    return user;
+                } else {
+                    throw new RuntimeException("Fingerprint verification failed for " + email);
+                }
             }
+        }
+
+        // 2. If email is NOT provided, search by fingerprint hash only (List-based query to avoid NonUniqueResultException)
+        java.util.List<User> matchedUsers = userRepository.findByFingerprintHash(fingerprintHash);
+        if (matchedUsers.size() == 1) {
+            User user = matchedUsers.get(0);
+            if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+                throw new RuntimeException("ACCESS DENIED: Membership is not active.");
+            }
+            return user;
+        } else if (matchedUsers.size() > 1) {
+            throw new RuntimeException("Multiple users matched this scan. Please enter your email to identify yourself.");
+        }
+
+        java.util.List<com.example.gym.entity.Staff> matchedStaffs = staffRepository.findByFingerprintHash(fingerprintHash);
+        if (matchedStaffs.size() == 1) {
+            com.example.gym.entity.Staff staff = matchedStaffs.get(0);
+            if (!"ACTIVE".equalsIgnoreCase(staff.getStatus())) {
+                throw new RuntimeException("ACCESS DENIED: Employee status is not active.");
+            }
+            return mapStaffToUser(staff);
+        } else if (matchedStaffs.size() > 1) {
+            throw new RuntimeException("Multiple employees matched this scan. Please enter your email to identify yourself.");
         }
 
         throw new RuntimeException("Fingerprint not recognized. Please register or try again.");

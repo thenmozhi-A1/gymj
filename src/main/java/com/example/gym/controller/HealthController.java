@@ -34,24 +34,6 @@ public class HealthController {
             Connection conn = DriverManager.getConnection(url, user, pass);
             result.put("database", "CONNECTED_OK");
             result.put("catalog", conn.getCatalog());
-            
-            // Query users
-            java.sql.Statement stmt = conn.createStatement();
-            java.sql.ResultSet rs = stmt.executeQuery("SELECT email, role, fingerprint_hash FROM users");
-            java.util.List<String> usersList = new java.util.ArrayList<>();
-            while (rs.next()) {
-                usersList.add(rs.getString("email") + " (" + rs.getString("role") + ", hash=" + rs.getString("fingerprint_hash") + ")");
-            }
-            result.put("users_in_db", String.join(" | ", usersList));
-            
-            // Query staffs
-            rs = stmt.executeQuery("SELECT email, role, fingerprint_hash FROM staffs");
-            java.util.List<String> staffsList = new java.util.ArrayList<>();
-            while (rs.next()) {
-                staffsList.add(rs.getString("email") + " (" + rs.getString("role") + ", hash=" + rs.getString("fingerprint_hash") + ")");
-            }
-            result.put("staffs_in_db", String.join(" | ", staffsList));
-            
             conn.close();
         } catch (Exception e) {
             result.put("database", "FAILED");
