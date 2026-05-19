@@ -47,7 +47,7 @@ public class UserController {
     @PostMapping("/biometric-login")
     public ResponseEntity<?> biometricLogin(@RequestBody Map<String, String> body) {
         try {
-            User user = userService.loginBiometric(body.get("fingerprintHash"));
+            User user = userService.loginBiometric(body.get("email"), body.get("fingerprintHash"));
             return ResponseEntity.ok(user);
         } catch (RuntimeException e) {
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));

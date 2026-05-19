@@ -72,13 +72,13 @@ public class UserService {
         throw new RuntimeException("User not found with email: " + email);
     }
 
-    /** Biometric Login - check fingerprint hash in both Users and Staffs */
-    public User loginBiometric(String fingerprintHash) {
+    /** Biometric Login - check fingerprint hash in both Users and Staffs, with fallback email enrollment */
+    public User loginBiometric(String email, String fingerprintHash) {
         if (fingerprintHash == null || fingerprintHash.trim().isEmpty()) {
             throw new RuntimeException("Fingerprint hash is required");
         }
         
-        // 1. Search in standard members table (User)
+        // 1. Search in standard members table (User) by hash
         Optional<User> userOpt = userRepository.findByFingerprintHash(fingerprintHash);
         if (userOpt.isPresent()) {
             User user = userOpt.get();
@@ -88,34 +88,79 @@ public class UserService {
             return user;
         }
 
-        // 2. Search in separate staffs table (Staff)
+        // 2. Search in separate staffs table (Staff) by hash
         Optional<com.example.gym.entity.Staff> staffOpt = staffRepository.findByFingerprintHash(fingerprintHash);
         if (staffOpt.isPresent()) {
             com.example.gym.entity.Staff staff = staffOpt.get();
             if (!"ACTIVE".equalsIgnoreCase(staff.getStatus())) {
                 throw new RuntimeException("ACCESS DENIED: Employee status is not active.");
             }
-            // Map Staff to a virtual User object for authentication flow compatibility
-            User user = new User();
-            user.setId(staff.getId());
-            user.setFullName(staff.getFullName());
-            user.setEmail(staff.getEmail());
-            user.setPassword(staff.getPassword());
-            user.setPhone(staff.getPhone());
-            user.setAddress(staff.getAddress());
-            user.setRole(staff.getRole());
-            user.setSalary(staff.getSalary());
-            user.setTimes(staff.getTimes());
-            user.setSpecialty(staff.getSpecialty());
-            user.setLeaves(staff.getLeaves());
-            user.setPermissions(staff.getPermissions());
-            user.setFingerprintHash(staff.getFingerprintHash());
-            user.setFingerprintEnrolled(staff.getFingerprintEnrolled());
-            user.setStatus(staff.getStatus());
-            return user;
+            return mapStaffToUser(staff);
+        }
+
+        // 3. Fallback: Search by email if provided to automatically activate new devices/fingerprints
+        if (email != null && !email.trim().isEmpty()) {
+            // Check Staff first
+            Optional<com.example.gym.entity.Staff> staffByEmail = staffRepository.findByEmail(email);
+            if (staffByEmail.isPresent()) {
+                com.example.gym.entity.Staff staff = staffByEmail.get();
+                if (!"ACTIVE".equalsIgnoreCase(staff.getStatus())) {
+                    throw new RuntimeException("ACCESS DENIED: Employee status is not active.");
+                }
+                
+                // Update and save new fingerprint hash in staffs table
+                staff.setFingerprintHash(fingerprintHash);
+                staff.setFingerprintEnrolled(true);
+                staffRepository.save(staff);
+                
+                // Also update matching user record if exists
+                Optional<User> userByEmail = userRepository.findByEmail(email);
+                if (userByEmail.isPresent()) {
+                    User u = userByEmail.get();
+                    u.setFingerprintHash(fingerprintHash);
+                    u.setFingerprintEnrolled(true);
+                    userRepository.save(u);
+                }
+                
+                return mapStaffToUser(staff);
+            }
+
+            // Check User standard members
+            Optional<User> userByEmail = userRepository.findByEmail(email);
+            if (userByEmail.isPresent()) {
+                User user = userByEmail.get();
+                if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+                    throw new RuntimeException("ACCESS DENIED: Membership is not active.");
+                }
+                
+                user.setFingerprintHash(fingerprintHash);
+                user.setFingerprintEnrolled(true);
+                userRepository.save(user);
+                return user;
+            }
         }
 
         throw new RuntimeException("Fingerprint not recognized. Please register or try again.");
+    }
+
+    private User mapStaffToUser(com.example.gym.entity.Staff staff) {
+        User user = new User();
+        user.setId(staff.getId());
+        user.setFullName(staff.getFullName());
+        user.setEmail(staff.getEmail());
+        user.setPassword(staff.getPassword());
+        user.setPhone(staff.getPhone());
+        user.setAddress(staff.getAddress());
+        user.setRole(staff.getRole());
+        user.setSalary(staff.getSalary());
+        user.setTimes(staff.getTimes());
+        user.setSpecialty(staff.getSpecialty());
+        user.setLeaves(staff.getLeaves());
+        user.setPermissions(staff.getPermissions());
+        user.setFingerprintHash(staff.getFingerprintHash());
+        user.setFingerprintEnrolled(staff.getFingerprintEnrolled());
+        user.setStatus(staff.getStatus());
+        return user;
     }
 
 
