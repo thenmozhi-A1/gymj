@@ -10,7 +10,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/staffs")
-@CrossOrigin(origins = "*")
 public class StaffController {
 
     private final StaffRepository staffRepository;
