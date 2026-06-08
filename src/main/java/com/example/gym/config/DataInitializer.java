@@ -1,8 +1,10 @@
 package com.example.gym.config;
 
 import com.example.gym.entity.Attendance;
+import com.example.gym.entity.Payment;
 import com.example.gym.entity.User;
 import com.example.gym.repository.AttendanceRepository;
+import com.example.gym.repository.PaymentRepository;
 import com.example.gym.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -10,13 +12,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Configuration
 public class DataInitializer {
 
     @Bean
-    public CommandLineRunner initData(UserRepository userRepository, AttendanceRepository attendanceRepository, JdbcTemplate jdbcTemplate) {
+    public CommandLineRunner initData(UserRepository userRepository, AttendanceRepository attendanceRepository, PaymentRepository paymentRepository, JdbcTemplate jdbcTemplate) {
         return args -> {
             // Guarantee 'staffs' table exists in database
             try {
@@ -116,6 +119,56 @@ public class DataInitializer {
                 }
             }
             System.out.println("✅ Sample attendance data added for the last 7 days.");
+
+            // Add sample payment/revenue data for the last 6 months
+            String[] planNames = {"Standard Plan", "Pro Membership", "Elite Yearly", "VIP Yearly"};
+            double[] planAmounts = {5000.0, 9000.0, 12000.0, 18000.0};
+            String[] paymentMethods = {"Razorpay", "UPI", "Credit Card", "Debit Card"};
+            
+            for (int i = 0; i < sampleUsers.length; i++) {
+                User user = userRepository.findByEmail(sampleUsers[i]).orElse(null);
+                if (user != null) {
+                    // Create 2-3 payments per user over the last 6 months
+                    int numPayments = 2 + (int)(Math.random() * 2);
+                    for (int p = 0; p < numPayments; p++) {
+                        Payment payment = new Payment();
+                        payment.setUser(user);
+                        
+                        // Random plan and amount
+                        int planIndex = (int)(Math.random() * planNames.length);
+                        payment.setPlanName(planNames[planIndex]);
+                        payment.setAmount(planAmounts[planIndex]);
+                        
+                        // Random payment method
+                        payment.setPaymentMethod(paymentMethods[(int)(Math.random() * paymentMethods.length)]);
+                        
+                        // Generate transaction ID
+                        payment.setTransactionId("TXN" + System.currentTimeMillis() + (int)(Math.random() * 10000));
+                        
+                        // Set payment status
+                        payment.setPaymentStatus("COMPLETED");
+                        
+                        // Random payment date within last 6 months
+                        int monthsBack = (int)(Math.random() * 6);
+                        int daysBack = (int)(Math.random() * 28);
+                        LocalDateTime paymentDate = LocalDateTime.now().minusMonths(monthsBack).minusDays(daysBack);
+                        payment.setPaymentDate(paymentDate);
+                        
+                        // Set plan start and end dates
+                        payment.setPlanStartDate(paymentDate.toLocalDate().atStartOfDay());
+                        if (planNames[planIndex].contains("Yearly")) {
+                            payment.setPlanEndDate(paymentDate.plusYears(1).toLocalDate().atStartOfDay());
+                        } else if (planNames[planIndex].contains("6 Months")) {
+                            payment.setPlanEndDate(paymentDate.plusMonths(6).toLocalDate().atStartOfDay());
+                        } else {
+                            payment.setPlanEndDate(paymentDate.plusMonths(1).toLocalDate().atStartOfDay());
+                        }
+                        
+                        paymentRepository.save(payment);
+                    }
+                }
+            }
+            System.out.println("✅ Sample payment/revenue data added for the last 6 months.");
         };
     }
 }
