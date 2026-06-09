@@ -28,6 +28,7 @@ public class Staff {
     private String specialty;
     private Integer leaves = 0;
     private Integer permissions = 0;
+    @Column(unique = true)
     private String fingerprintHash;
     private Boolean fingerprintEnrolled = false;
     private String status = "ACTIVE";

@@ -14,8 +14,12 @@ public class Attendance {
     private Long id;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "staff_id", nullable = true)
+    private Staff staff;
 
     private LocalDate attendanceDate;
     private LocalTime checkInTime;
@@ -47,6 +51,8 @@ public class Attendance {
     public void setId(Long id) { this.id = id; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+    public Staff getStaff() { return staff; }
+    public void setStaff(Staff staff) { this.staff = staff; }
     public LocalDate getAttendanceDate() { return attendanceDate; }
     public void setAttendanceDate(LocalDate attendanceDate) { this.attendanceDate = attendanceDate; }
     public LocalTime getCheckInTime() { return checkInTime; }

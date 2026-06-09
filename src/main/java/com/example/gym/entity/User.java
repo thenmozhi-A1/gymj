@@ -34,11 +34,18 @@ public class User {
     private String specialty;
     private Integer leaves = 0;
     private Integer permissions = 0;
+    @Column(unique = true)
     private String fingerprintHash;
     private Boolean fingerprintEnrolled = false;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private java.util.List<Payment> payments;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private java.util.List<Attendance> attendances;
 
     public User() {}
 

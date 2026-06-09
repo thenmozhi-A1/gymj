@@ -30,6 +30,16 @@ public class AttendanceController {
         }
     }
 
+    /** POST /api/attendance/staff/{staffId} — Mark attendance (check-in) for a staff */
+    @PostMapping("/staff/{staffId}")
+    public ResponseEntity<?> markStaffAttendance(@PathVariable Long staffId, @RequestBody Attendance attendance) {
+        try {
+            return ResponseEntity.ok(attendanceService.markStaffAttendance(staffId, attendance));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     /** GET /api/attendance — Get all attendance (admin) */
     @GetMapping
     public List<Attendance> getAllAttendance() {

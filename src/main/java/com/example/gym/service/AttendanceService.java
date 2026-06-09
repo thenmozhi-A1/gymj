@@ -1,8 +1,10 @@
 package com.example.gym.service;
 
 import com.example.gym.entity.Attendance;
+import com.example.gym.entity.Staff;
 import com.example.gym.entity.User;
 import com.example.gym.repository.AttendanceRepository;
+import com.example.gym.repository.StaffRepository;
 import com.example.gym.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
@@ -14,10 +16,12 @@ public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
     private final UserRepository userRepository;
+    private final StaffRepository staffRepository;
 
-    public AttendanceService(AttendanceRepository attendanceRepository, UserRepository userRepository) {
+    public AttendanceService(AttendanceRepository attendanceRepository, UserRepository userRepository, StaffRepository staffRepository) {
         this.attendanceRepository = attendanceRepository;
         this.userRepository = userRepository;
+        this.staffRepository = staffRepository;
     }
 
     /** Mark attendance (check-in) for a user */
@@ -25,6 +29,14 @@ public class AttendanceService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
         attendance.setUser(user);
+        return attendanceRepository.save(attendance);
+    }
+
+    /** Mark attendance (check-in) for a staff */
+    public Attendance markStaffAttendance(Long staffId, Attendance attendance) {
+        Staff staff = staffRepository.findById(staffId)
+                .orElseThrow(() -> new RuntimeException("Staff not found with id: " + staffId));
+        attendance.setStaff(staff);
         return attendanceRepository.save(attendance);
     }
 
