@@ -28,18 +28,22 @@ public class User {
     private String status;
     private String role;
 
-    // Staff-specific fields
-    private String salary;
-    private String times;
-    private String specialty;
-    private Integer leaves = 0;
-    private Integer permissions = 0;
     @Column(unique = true)
     private String fingerprintHash;
     private Boolean fingerprintEnrolled = false;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonManagedReference
+    private Staff staffDetails;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
+
+    // Password security fields
+    private Integer failedLoginAttempts = 0;
+    private LocalDateTime lockedUntil;
+    private Boolean mustChangePassword = false;
+    private LocalDateTime passwordChangedAt;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private java.util.List<Payment> payments;
@@ -49,7 +53,7 @@ public class User {
 
     public User() {}
 
-    public User(Long id, String fullName, String email, String password, String phone, String address, String gender, String membershipType, String status, String role, String salary, String times, String specialty, Integer leaves, Integer permissions, String fingerprintHash, Boolean fingerprintEnrolled, LocalDateTime createdAt) {
+    public User(Long id, String fullName, String email, String password, String phone, String address, String gender, String membershipType, String status, String role, String fingerprintHash, Boolean fingerprintEnrolled, LocalDateTime createdAt) {
         this.id = id;
         this.fullName = fullName;
         this.email = email;
@@ -60,11 +64,6 @@ public class User {
         this.membershipType = membershipType;
         this.status = status;
         this.role = role;
-        this.salary = salary;
-        this.times = times;
-        this.specialty = specialty;
-        this.leaves = leaves;
-        this.permissions = permissions;
         this.fingerprintHash = fingerprintHash;
         this.fingerprintEnrolled = fingerprintEnrolled;
         this.createdAt = createdAt;
@@ -75,9 +74,9 @@ public class User {
         this.createdAt = LocalDateTime.now();
         if (this.status == null) this.status = "ACTIVE";
         if (this.role == null) this.role = "USER";
-        if (this.leaves == null) this.leaves = 0;
-        if (this.permissions == null) this.permissions = 0;
         if (this.fingerprintEnrolled == null) this.fingerprintEnrolled = false;
+        if (this.failedLoginAttempts == null) this.failedLoginAttempts = 0;
+        if (this.mustChangePassword == null) this.mustChangePassword = false;
     }
 
     // Getters and Setters
@@ -101,20 +100,22 @@ public class User {
     public void setStatus(String status) { this.status = status; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
-    public String getSalary() { return salary; }
-    public void setSalary(String salary) { this.salary = salary; }
-    public String getTimes() { return times; }
-    public void setTimes(String times) { this.times = times; }
-    public String getSpecialty() { return specialty; }
-    public void setSpecialty(String specialty) { this.specialty = specialty; }
-    public Integer getLeaves() { return leaves; }
-    public void setLeaves(Integer leaves) { this.leaves = leaves; }
-    public Integer getPermissions() { return permissions; }
-    public void setPermissions(Integer permissions) { this.permissions = permissions; }
+    public Staff getStaffDetails() { return staffDetails; }
+    public void setStaffDetails(Staff staffDetails) { this.staffDetails = staffDetails; }
     public String getFingerprintHash() { return fingerprintHash; }
     public void setFingerprintHash(String fingerprintHash) { this.fingerprintHash = fingerprintHash; }
     public Boolean getFingerprintEnrolled() { return fingerprintEnrolled; }
     public void setFingerprintEnrolled(Boolean fingerprintEnrolled) { this.fingerprintEnrolled = fingerprintEnrolled; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    
+    // Security Getters and Setters
+    public Integer getFailedLoginAttempts() { return failedLoginAttempts; }
+    public void setFailedLoginAttempts(Integer failedLoginAttempts) { this.failedLoginAttempts = failedLoginAttempts; }
+    public LocalDateTime getLockedUntil() { return lockedUntil; }
+    public void setLockedUntil(LocalDateTime lockedUntil) { this.lockedUntil = lockedUntil; }
+    public Boolean getMustChangePassword() { return mustChangePassword; }
+    public void setMustChangePassword(Boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
+    public LocalDateTime getPasswordChangedAt() { return passwordChangedAt; }
+    public void setPasswordChangedAt(LocalDateTime passwordChangedAt) { this.passwordChangedAt = passwordChangedAt; }
 }

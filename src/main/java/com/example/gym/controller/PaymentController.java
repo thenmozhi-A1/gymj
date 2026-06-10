@@ -1,7 +1,6 @@
-package com.example.gym.controller;
-
 import com.example.gym.entity.Payment;
 import com.example.gym.service.PaymentService;
+import com.example.gym.service.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,16 +12,27 @@ import java.util.Map;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final NotificationService notificationService;
 
-    public PaymentController(PaymentService paymentService) {
+    public PaymentController(PaymentService paymentService, NotificationService notificationService) {
         this.paymentService = paymentService;
+        this.notificationService = notificationService;
     }
 
     /** POST /api/payments/user/{userId} — Add payment for a user */
     @PostMapping("/user/{userId}")
     public ResponseEntity<?> addPayment(@PathVariable Long userId, @RequestBody Payment payment) {
         try {
-            return ResponseEntity.ok(paymentService.addPayment(userId, payment));
+            Payment saved = paymentService.addPayment(userId, payment);
+            // Notify admins if the payment failed
+            if ("FAILED".equalsIgnoreCase(saved.getPaymentStatus())) {
+                notificationService.broadcast("PAYMENT_FAILED", Map.of(
+                        "id", saved.getId(),
+                        "amount", saved.getAmount() != null ? saved.getAmount() : 0,
+                        "user", userId
+                ));
+            }
+            return ResponseEntity.ok(saved);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

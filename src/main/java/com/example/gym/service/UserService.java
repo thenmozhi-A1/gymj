@@ -3,20 +3,26 @@ package com.example.gym.service;
 import com.example.gym.entity.User;
 import com.example.gym.repository.UserRepository;
 import com.example.gym.repository.StaffRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
     private final StaffRepository staffRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, StaffRepository staffRepository) {
+    public UserService(UserRepository userRepository, StaffRepository staffRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.staffRepository = staffRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /** Register a new user (account creation) */
@@ -28,6 +34,22 @@ public class UserService {
         if ("admin@gym.com".equalsIgnoreCase(user.getEmail())) {
             user.setRole("ADMIN");
         }
+        
+        // Admin user creation logic (no password provided)
+        if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+            String tempPassword = UUID.randomUUID().toString().substring(0, 12);
+            user.setPassword(passwordEncoder.encode(tempPassword));
+            user.setMustChangePassword(true);
+            
+            User savedUser = userRepository.save(user);
+            // Temporarily set raw password to return to Admin once
+            savedUser.setPassword(tempPassword);
+            return savedUser;
+        }
+
+        // Hash password before saving
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        
         return userRepository.save(user);
     }
 
@@ -36,40 +58,51 @@ public class UserService {
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isPresent()) {
             User user = userOpt.get();
-            if (!user.getPassword().equals(password)) {
-                throw new RuntimeException("Invalid password");
-            }
-            return user;
-        }
-
-        // If not found in User, check Staff table!
-        Optional<com.example.gym.entity.Staff> staffOpt = staffRepository.findByEmail(email);
-        if (staffOpt.isPresent()) {
-            com.example.gym.entity.Staff staff = staffOpt.get();
-            if (!staff.getPassword().equals(password)) {
-                throw new RuntimeException("Invalid password");
-            }
-            // Map Staff to a virtual User object for authentication flow compatibility
-            User user = new User();
-            user.setId(staff.getId());
-            user.setFullName(staff.getFullName());
-            user.setEmail(staff.getEmail());
-            user.setPassword(staff.getPassword());
-            user.setPhone(staff.getPhone());
-            user.setAddress(staff.getAddress());
-            user.setRole(staff.getRole());
-            user.setSalary(staff.getSalary());
-            user.setTimes(staff.getTimes());
-            user.setSpecialty(staff.getSpecialty());
-            user.setLeaves(staff.getLeaves());
-            user.setPermissions(staff.getPermissions());
-            user.setFingerprintHash(staff.getFingerprintHash());
-            user.setFingerprintEnrolled(staff.getFingerprintEnrolled());
-            user.setStatus(staff.getStatus());
+            verifyAndMigratePassword(user, password);
             return user;
         }
 
         throw new RuntimeException("User not found with email: " + email);
+    }
+
+    private void verifyAndMigratePassword(User user, String rawPassword) {
+        String dbPassword = user.getPassword();
+        LocalDateTime lockedUntil = user.getLockedUntil();
+        Integer failedAttempts = user.getFailedLoginAttempts() != null ? user.getFailedLoginAttempts() : 0;
+
+        if (lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now())) {
+            throw new RuntimeException("Account locked. Try again later.");
+        }
+
+        boolean isMatch = false;
+
+        // Check if it's already a BCrypt hash
+        if (dbPassword != null && dbPassword.startsWith("$2a$")) {
+            isMatch = passwordEncoder.matches(rawPassword, dbPassword);
+        } else {
+            // Plaintext fallback (seamless migration)
+            if (dbPassword != null && dbPassword.equals(rawPassword)) {
+                isMatch = true;
+                // Migrate to BCrypt
+                String hashed = passwordEncoder.encode(rawPassword);
+                user.setPassword(hashed);
+            }
+        }
+
+        if (!isMatch) {
+            failedAttempts++;
+            if (failedAttempts >= 5) {
+                user.setLockedUntil(LocalDateTime.now().plusMinutes(10));
+            }
+            user.setFailedLoginAttempts(failedAttempts);
+            userRepository.save(user);
+            throw new RuntimeException("Invalid email or password");
+        }
+
+        // On successful login, reset lockout state
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        userRepository.save(user);
     }
 
     /** Biometric Login - check fingerprint hash in both Users and Staffs, with fallback email enrollment */
@@ -80,37 +113,6 @@ public class UserService {
         
         // 1. If email is provided, verify directly by email for maximum reliability and uniqueness
         if (email != null && !email.trim().isEmpty()) {
-            // Check Staff table first
-            Optional<com.example.gym.entity.Staff> staffOpt = staffRepository.findByEmail(email);
-            if (staffOpt.isPresent()) {
-                com.example.gym.entity.Staff staff = staffOpt.get();
-                if (!"ACTIVE".equalsIgnoreCase(staff.getStatus())) {
-                    throw new RuntimeException("ACCESS DENIED: Employee status is not active.");
-                }
-                
-                String dbHash = staff.getFingerprintHash();
-                // If it's a first time scan (placeholder hash starting with "fp_" or empty) OR the hash matches, let them in!
-                if (dbHash == null || dbHash.trim().isEmpty() || dbHash.startsWith("fp_") || dbHash.equalsIgnoreCase(fingerprintHash)) {
-                    // Update and save new fingerprint hash
-                    staff.setFingerprintHash(fingerprintHash);
-                    staff.setFingerprintEnrolled(true);
-                    staffRepository.save(staff);
-                    
-                    // Sync to User table if exists
-                    Optional<User> userByEmail = userRepository.findByEmail(email);
-                    if (userByEmail.isPresent()) {
-                        User u = userByEmail.get();
-                        u.setFingerprintHash(fingerprintHash);
-                        u.setFingerprintEnrolled(true);
-                        userRepository.save(u);
-                    }
-                    return mapStaffToUser(staff);
-                } else {
-                    throw new RuntimeException("Fingerprint verification failed for " + email);
-                }
-            }
-
-            // Check User table next
             Optional<User> userOpt = userRepository.findByEmail(email);
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
@@ -142,41 +144,8 @@ public class UserService {
             throw new RuntimeException("Multiple users matched this scan. Please enter your email to identify yourself.");
         }
 
-        java.util.List<com.example.gym.entity.Staff> matchedStaffs = staffRepository.findByFingerprintHash(fingerprintHash);
-        if (matchedStaffs.size() == 1) {
-            com.example.gym.entity.Staff staff = matchedStaffs.get(0);
-            if (!"ACTIVE".equalsIgnoreCase(staff.getStatus())) {
-                throw new RuntimeException("ACCESS DENIED: Employee status is not active.");
-            }
-            return mapStaffToUser(staff);
-        } else if (matchedStaffs.size() > 1) {
-            throw new RuntimeException("Multiple employees matched this scan. Please enter your email to identify yourself.");
-        }
-
         throw new RuntimeException("Fingerprint not recognized. Please register or try again.");
     }
-
-    private User mapStaffToUser(com.example.gym.entity.Staff staff) {
-        User user = new User();
-        user.setId(staff.getId());
-        user.setFullName(staff.getFullName());
-        user.setEmail(staff.getEmail());
-        user.setPassword(staff.getPassword());
-        user.setPhone(staff.getPhone());
-        user.setAddress(staff.getAddress());
-        user.setRole(staff.getRole());
-        user.setSalary(staff.getSalary());
-        user.setTimes(staff.getTimes());
-        user.setSpecialty(staff.getSpecialty());
-        user.setLeaves(staff.getLeaves());
-        user.setPermissions(staff.getPermissions());
-        user.setFingerprintHash(staff.getFingerprintHash());
-        user.setFingerprintEnrolled(staff.getFingerprintEnrolled());
-        user.setStatus(staff.getStatus());
-        return user;
-    }
-
-
     /** Get all users */
     public List<User> getAllUsers() {
         return userRepository.findAll();
@@ -184,8 +153,34 @@ public class UserService {
 
     /** Get user by ID */
     public User getUserById(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        return userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    /** Get user by email */
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email).orElse(null);
+    }
+
+    public void changePassword(Long userId, String currentPassword, String newPassword, String confirmPassword) {
+        User user = getUserById(userId);
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new RuntimeException("Invalid current password");
+        }
+
+        if (!newPassword.equals(confirmPassword)) {
+            throw new RuntimeException("New passwords do not match");
+        }
+
+        Pattern pattern = Pattern.compile("^(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&#])[A-Za-z\\d@$!%*?&#]{8,}$");
+        if (!pattern.matcher(newPassword).matches()) {
+            throw new RuntimeException("Password must be at least 8 characters long and contain at least one uppercase letter, one number, and one special character.");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+        user.setPasswordChangedAt(LocalDateTime.now());
+        userRepository.save(user);
     }
 
     /** Update user details */
@@ -198,11 +193,6 @@ public class UserService {
         existing.setMembershipType(updatedUser.getMembershipType());
         existing.setStatus(updatedUser.getStatus());
         existing.setRole(updatedUser.getRole());
-        existing.setSalary(updatedUser.getSalary());
-        existing.setTimes(updatedUser.getTimes());
-        existing.setSpecialty(updatedUser.getSpecialty());
-        existing.setLeaves(updatedUser.getLeaves());
-        existing.setPermissions(updatedUser.getPermissions());
         existing.setFingerprintHash(updatedUser.getFingerprintHash());
         existing.setFingerprintEnrolled(updatedUser.getFingerprintEnrolled());
         return userRepository.save(existing);

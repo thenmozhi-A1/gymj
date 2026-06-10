@@ -1,11 +1,12 @@
 package com.example.gym.repository;
 
-import com.example.gym.entity.Staff;
+import com.example.gym.entity.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface StaffRepository extends JpaRepository<Staff, Long> {
+public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
+    Optional<RefreshToken> findByTokenHash(String tokenHash);
 }

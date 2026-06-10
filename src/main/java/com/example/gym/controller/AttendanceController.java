@@ -2,6 +2,7 @@ package com.example.gym.controller;
 
 import com.example.gym.entity.Attendance;
 import com.example.gym.service.AttendanceService;
+import com.example.gym.service.NotificationService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,16 +16,24 @@ import java.util.Map;
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
+    private final NotificationService notificationService;
 
-    public AttendanceController(AttendanceService attendanceService) {
+    public AttendanceController(AttendanceService attendanceService, NotificationService notificationService) {
         this.attendanceService = attendanceService;
+        this.notificationService = notificationService;
     }
 
     /** POST /api/attendance/user/{userId} — Mark attendance (check-in) */
     @PostMapping("/user/{userId}")
     public ResponseEntity<?> markAttendance(@PathVariable Long userId, @RequestBody Attendance attendance) {
         try {
-            return ResponseEntity.ok(attendanceService.markAttendance(userId, attendance));
+            Attendance saved = attendanceService.markAttendance(userId, attendance);
+            notificationService.broadcast("ATTENDANCE", Map.of(
+                    "userId", userId,
+                    "name", saved.getFullName() != null ? saved.getFullName() : "Member",
+                    "time", saved.getEntry() != null ? saved.getEntry() : "now"
+            ));
+            return ResponseEntity.ok(saved);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

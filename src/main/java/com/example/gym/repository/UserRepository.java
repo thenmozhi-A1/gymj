@@ -11,4 +11,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     java.util.List<User> findByFingerprintHash(String fingerprintHash);
     boolean existsByEmail(String email);
+    java.util.List<User> findByRoleIn(java.util.List<String> roles);
 }
