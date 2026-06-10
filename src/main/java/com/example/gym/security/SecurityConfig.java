@@ -38,6 +38,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
                 .requestMatchers("/api/users/login", "/api/users/register", "/api/users/biometric-login").permitAll() // Legacy endpoints
                 .requestMatchers("/api/v1/webauthn/auth/**").permitAll() // WebAuthn Kiosk login
+                .requestMatchers(HttpMethod.GET, "/api/feedbacks").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/consultations").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/staff/**").hasAnyRole("ADMIN", "TRAINER", "FRONT OFFICE", "STAFF")
