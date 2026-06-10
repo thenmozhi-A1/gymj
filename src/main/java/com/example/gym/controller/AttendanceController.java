@@ -30,8 +30,8 @@ public class AttendanceController {
             Attendance saved = attendanceService.markAttendance(userId, attendance);
             notificationService.broadcast("ATTENDANCE", Map.of(
                     "userId", userId,
-                    "name", saved.getFullName() != null ? saved.getFullName() : "Member",
-                    "time", saved.getEntry() != null ? saved.getEntry() : "now"
+                    "name", (saved.getUser() != null && saved.getUser().getFullName() != null) ? saved.getUser().getFullName() : "Member",
+                    "time", saved.getCheckInTime() != null ? saved.getCheckInTime().toString() : "now"
             ));
             return ResponseEntity.ok(saved);
         } catch (RuntimeException e) {
