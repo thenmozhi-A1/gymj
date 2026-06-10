@@ -1,14 +1,12 @@
 package com.example.gym.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 /**
  * Bound from application.properties prefix "gym.notifications".
  * Toggle enabled/disabled and configure days-ahead window at runtime
  * via environment variables or the admin settings API.
  */
-@Component
 @ConfigurationProperties(prefix = "gym.notifications")
 public class NotificationSettings {
 
