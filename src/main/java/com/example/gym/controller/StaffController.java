@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/v1/staffs") // API Versioning applied
+@RequestMapping("/api/staffs") // Fixed mapping to match frontend
 public class StaffController {
 
     private final UserRepository userRepository;
