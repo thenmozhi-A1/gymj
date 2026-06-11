@@ -46,9 +46,11 @@ public class User {
     private LocalDateTime passwordChangedAt;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private java.util.List<Payment> payments;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private java.util.List<Attendance> attendances;
 
     public User() {}
