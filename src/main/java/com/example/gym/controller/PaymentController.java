@@ -1,3 +1,4 @@
+package com.example.gym.controller; 
 import com.example.gym.entity.Payment;
 import com.example.gym.service.PaymentService;
 import com.example.gym.service.NotificationService;
