@@ -63,6 +63,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
+        // EventSource (SSE) cannot send Authorization headers — fall back to query param
+        String tokenParam = request.getParameter("token");
+        if (tokenParam != null && !tokenParam.isEmpty()) {
+            return tokenParam;
+        }
         return null;
     }
 }
