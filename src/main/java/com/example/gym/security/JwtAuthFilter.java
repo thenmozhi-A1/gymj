@@ -44,8 +44,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 virtualUser.setEmail(email);
                 virtualUser.setRole(role);
                 
+                String safeRole = (role != null) ? role.toUpperCase() : "USER";
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        virtualUser, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
+                        virtualUser, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + safeRole))
                 );
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
