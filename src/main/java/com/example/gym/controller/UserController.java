@@ -91,52 +91,7 @@ public class UserController {
         }
     }
 
-    /** GET /api/users/credential — Get credential ID by email */
-    @GetMapping("/credential")
-    public ResponseEntity<?> getCredential(@RequestParam String email) {
-        try {
-            User user = userService.getUserByEmail(email);
-            if (user != null && user.getFingerprintHash() != null) {
-                return ResponseEntity.ok(Map.of("credentialId", user.getFingerprintHash()));
-            }
-            return ResponseEntity.notFound().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
 
-    /** POST /api/users/biometric-login — Login with fingerprint hash lookup */
-    @PostMapping("/biometric-login")
-    public ResponseEntity<?> biometricLogin(@RequestBody Map<String, String> body) {
-        try {
-            User user = userService.loginBiometric(body.get("email"), body.get("fingerprintHash"));
-            
-            String accessToken = tokenProvider.generateAccessToken(user);
-            String rawRefreshToken = tokenProvider.generateRefreshToken();
-            
-            RefreshToken rt = new RefreshToken(
-                    user, 
-                    hashToken(rawRefreshToken), 
-                    LocalDateTime.now().plus(30, ChronoUnit.DAYS), 
-                    "Biometric Device"
-            );
-            refreshTokenRepository.save(rt);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("accessToken", accessToken);
-            response.put("refreshToken", rawRefreshToken);
-            response.put("user", Map.of(
-                    "id", user.getId(),
-                    "name", user.getFullName(),
-                    "email", user.getEmail(),
-                    "role", user.getRole()
-            ));
-
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
-        }
-    }
 
 
     /** GET /api/users — Get all users (admin) */
