@@ -16,7 +16,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/notification-settings")
-@CrossOrigin("*")
 public class NotificationSettingsController {
 
     private final NotificationSettings settings;

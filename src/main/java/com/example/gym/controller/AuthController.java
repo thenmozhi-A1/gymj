@@ -30,7 +30,6 @@ import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin("*") // Covered by WebConfig but good practice
 public class AuthController {
 
     private final UserService userService;
