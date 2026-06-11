@@ -148,7 +148,7 @@ public class UserService {
     }
     /** Get all users */
     public List<User> getAllUsers() {
-        return userRepository.findAll();
+        return userRepository.findByRoleIn(java.util.Collections.singletonList("USER"));
     }
 
     /** Get user by ID */
