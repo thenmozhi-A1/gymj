@@ -59,7 +59,14 @@ public class DataInitializer {
                 userRepository.save(admin);
                 System.out.println("✅ Default Admin account created: " + adminEmail + " / admin");
             } else {
-                System.out.println("ℹ️ Admin account already exists.");
+                User admin = userRepository.findByEmail(adminEmail).orElse(null);
+                if (admin != null) {
+                    admin.setPassword("admin");
+                    admin.setLockedUntil(null);
+                    admin.setFailedLoginAttempts(0);
+                    userRepository.save(admin);
+                    System.out.println("ℹ️ Admin account already exists. Unlocked and reset password to 'admin'.");
+                }
             }
 
             // Create sample users for attendance data
