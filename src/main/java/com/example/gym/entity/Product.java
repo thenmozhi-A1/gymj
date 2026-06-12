@@ -1,6 +1,8 @@
 package com.example.gym.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -10,9 +12,10 @@ import java.time.Instant;
 @Entity
 @Table(name = "products")
 @Data
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class Product {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -23,26 +26,38 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    private String category; // SUPPLEMENT, APPAREL, EQUIPMENT, ACCESSORY
-
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    private ProductCategory category;
+
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
     @Column(nullable = false)
     private Integer stockQuantity;
 
-    @Column(unique = true)
+    @Column(nullable = false, unique = true)
     private String sku;
 
     private String imageUrl;
 
+    @Builder.Default
+    @Column(nullable = false)
     private Boolean isActive = true;
 
-    @Version
-    private Long version; // Optimistic locking to prevent oversell
-
     @Column(updatable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     private Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
 }

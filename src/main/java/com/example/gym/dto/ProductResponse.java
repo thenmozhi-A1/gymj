@@ -1,17 +1,23 @@
 package com.example.gym.dto;
 
+import com.example.gym.entity.ProductCategory;
+import lombok.Builder;
 import lombok.Data;
+
 import java.math.BigDecimal;
 
 @Data
-public class ProductDTO {
+@Builder
+public class ProductResponse {
     private Long id;
     private String name;
     private String description;
-    private String category;
+    private ProductCategory category;
     private BigDecimal price;
     private Integer stockQuantity;
     private String sku;
     private String imageUrl;
     private Boolean isActive;
+    private String createdAt;
+    private String updatedAt;
 }
