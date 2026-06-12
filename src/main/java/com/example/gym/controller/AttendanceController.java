@@ -1,101 +1,75 @@
 package com.example.gym.controller;
 
-import com.example.gym.entity.Attendance;
+import com.example.gym.dto.AttendanceResponse;
+import com.example.gym.dto.AttendanceStatsResponse;
 import com.example.gym.service.AttendanceService;
-import com.example.gym.service.NotificationService;
-import org.springframework.format.annotation.DateTimeFormat;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/attendance")
+@RequiredArgsConstructor
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
-    private final NotificationService notificationService;
 
-    public AttendanceController(AttendanceService attendanceService, NotificationService notificationService) {
-        this.attendanceService = attendanceService;
-        this.notificationService = notificationService;
-    }
-
-    /** POST /api/attendance/user/{userId} — Mark attendance (check-in) */
+    // Member check-in
     @PostMapping("/user/{userId}")
-    public ResponseEntity<?> markAttendance(@PathVariable Long userId, @RequestBody Attendance attendance) {
+    public ResponseEntity<?> checkInUser(@PathVariable Long userId) {
         try {
-            Attendance saved = attendanceService.markAttendance(userId, attendance);
-            notificationService.broadcast("ATTENDANCE", Map.of(
-                    "userId", userId,
-                    "name", (saved.getUser() != null && saved.getUser().getFullName() != null) ? saved.getUser().getFullName() : "Member",
-                    "time", saved.getCheckInTime() != null ? saved.getCheckInTime().toString() : "now"
-            ));
-            return ResponseEntity.ok(saved);
+            return ResponseEntity.ok(attendanceService.checkInUser(userId));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
     }
 
-    /** POST /api/attendance/staff/{staffId} — Mark attendance (check-in) for a staff */
+    // Staff check-in
     @PostMapping("/staff/{staffId}")
-    public ResponseEntity<?> markStaffAttendance(@PathVariable Long staffId, @RequestBody Attendance attendance) {
+    public ResponseEntity<?> checkInStaff(@PathVariable Long staffId) {
         try {
-            return ResponseEntity.ok(attendanceService.markStaffAttendance(staffId, attendance));
+            return ResponseEntity.ok(attendanceService.checkInStaff(staffId));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
     }
 
-    /** GET /api/attendance — Get all attendance (admin) */
-    @GetMapping
-    public List<Attendance> getAllAttendance() {
-        return attendanceService.getAllAttendance();
-    }
-
-    /** GET /api/attendance/user/{userId} — Get all attendance for a user */
-    @GetMapping("/user/{userId}")
-    public List<Attendance> getAttendanceByUser(@PathVariable Long userId) {
-        return attendanceService.getAttendanceByUser(userId);
-    }
-
-    /** GET /api/attendance/staff/{staffId} — Get all attendance for a staff */
-    @GetMapping("/staff/{staffId}")
-    public List<Attendance> getAttendanceByStaff(@PathVariable Long staffId) {
-        return attendanceService.getAttendanceByStaff(staffId);
-    }
-
-    /** GET /api/attendance/date?date=2024-05-01 — Get all attendance for a date */
-    @GetMapping("/date")
-    public List<Attendance> getAttendanceByDate(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return attendanceService.getAttendanceByDate(date);
-    }
-
-    /** GET /api/attendance/user/{userId}/date?date=2024-05-01 — Get user attendance for a specific date */
-    @GetMapping("/user/{userId}/date")
-    public List<Attendance> getAttendanceByUserAndDate(
-            @PathVariable Long userId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return attendanceService.getAttendanceByUserAndDate(userId, date);
-    }
-
-    /** PUT /api/attendance/{id}/checkout — Update check-out time */
+    // Check-out (shared — works for both user and staff records)
     @PutMapping("/{id}/checkout")
-    public ResponseEntity<?> updateCheckOut(@PathVariable Long id, @RequestBody Attendance attendance) {
+    public ResponseEntity<?> checkOut(@PathVariable Long id) {
         try {
-            return ResponseEntity.ok(attendanceService.updateCheckOut(id, attendance));
+            return ResponseEntity.ok(attendanceService.checkOut(id));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
     }
 
-    /** DELETE /api/attendance/{id} — Delete attendance record */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteAttendance(@PathVariable Long id) {
-        attendanceService.deleteAttendance(id);
-        return ResponseEntity.ok(Map.of("message", "Attendance record deleted"));
+    // Member history
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<AttendanceResponse>> getByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(attendanceService.getByUser(userId));
+    }
+
+    // Staff history
+    @GetMapping("/staff/{staffId}")
+    public ResponseEntity<List<AttendanceResponse>> getByStaff(@PathVariable Long staffId) {
+        return ResponseEntity.ok(attendanceService.getByStaff(staffId));
+    }
+
+    // Admin: all records
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<AttendanceResponse>> getAll() {
+        return ResponseEntity.ok(attendanceService.getAll());
+    }
+
+    // Admin: today's live stats
+    @GetMapping("/stats/today")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AttendanceStatsResponse> getTodayStats() {
+        return ResponseEntity.ok(attendanceService.getTodayStats());
     }
 }
