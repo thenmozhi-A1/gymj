@@ -21,8 +21,13 @@ public class Attendance {
     @JoinColumn(name = "staff_id", nullable = true)
     private Staff staff;
 
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate attendanceDate;
+    
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "HH:mm:ss")
     private LocalTime checkInTime;
+    
+    @com.fasterxml.jackson.annotation.JsonFormat(pattern = "HH:mm:ss")
     private LocalTime checkOutTime;
     private String status;
     private String notes;
