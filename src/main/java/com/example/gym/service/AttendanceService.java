@@ -45,6 +45,11 @@ public class AttendanceService {
         return attendanceRepository.findByUserId(userId);
     }
 
+    /** Get all attendance records for a specific staff */
+    public List<Attendance> getAttendanceByStaff(Long staffId) {
+        return attendanceRepository.findByStaffId(staffId);
+    }
+
     /** Get attendance for a specific user on a specific date */
     public List<Attendance> getAttendanceByUserAndDate(Long userId, LocalDate date) {
         return attendanceRepository.findByUserIdAndAttendanceDate(userId, date);

@@ -61,6 +61,12 @@ public class AttendanceController {
         return attendanceService.getAttendanceByUser(userId);
     }
 
+    /** GET /api/attendance/staff/{staffId} — Get all attendance for a staff */
+    @GetMapping("/staff/{staffId}")
+    public List<Attendance> getAttendanceByStaff(@PathVariable Long staffId) {
+        return attendanceService.getAttendanceByStaff(staffId);
+    }
+
     /** GET /api/attendance/date?date=2024-05-01 — Get all attendance for a date */
     @GetMapping("/date")
     public List<Attendance> getAttendanceByDate(
