@@ -1,5 +1,8 @@
 package com.example.gym.service;
 
+import com.example.gym.entity.Notification;
+import com.example.gym.repository.NotificationRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -15,6 +18,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class NotificationService {
 
     private final CopyOnWriteArrayList<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+    private final NotificationRepository notificationRepository;
+    private final ObjectMapper objectMapper;
+
+    public NotificationService(NotificationRepository notificationRepository, ObjectMapper objectMapper) {
+        this.notificationRepository = notificationRepository;
+        this.objectMapper = objectMapper;
+    }
 
     /**
      * Creates a new SSE emitter, registers it, and sets up lifecycle callbacks to remove
@@ -40,11 +50,23 @@ public class NotificationService {
 
     /**
      * Broadcasts a notification event to all currently subscribed admin clients.
+     * Also saves the notification to the database.
      *
      * @param type    Event category (e.g. "NEW_MEMBER", "PAYMENT_FAILED", "ATTENDANCE")
      * @param payload A map of key-value pairs to include in the event data
      */
     public void broadcast(String type, Map<String, Object> payload) {
+        // Save to DB
+        try {
+            Notification notification = new Notification();
+            notification.setType(type);
+            notification.setPayload(objectMapper.writeValueAsString(payload));
+            notificationRepository.save(notification);
+        } catch (Exception e) {
+            // Log but don't fail broadcast
+            System.err.println("Failed to save notification: " + e.getMessage());
+        }
+
         Map<String, Object> event = Map.of(
                 "type", type,
                 "payload", payload,

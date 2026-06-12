@@ -41,13 +41,47 @@ public class ExpiryNotificationService {
     private final PaymentRepository paymentRepository;
     private final JavaMailSender mailSender;
     private final NotificationSettings settings;
+    private final NotificationService notificationService;
 
     public ExpiryNotificationService(PaymentRepository paymentRepository,
                                      JavaMailSender mailSender,
-                                     NotificationSettings settings) {
+                                     NotificationSettings settings,
+                                     NotificationService notificationService) {
         this.paymentRepository = paymentRepository;
         this.mailSender        = mailSender;
         this.settings          = settings;
+        this.notificationService = notificationService;
+    }
+
+    /**
+     * Scheduled trigger — runs every 5 minutes.
+     * Scans payments expiring today and pushes SSE notifications.
+     */
+    @Scheduled(fixedRate = 300000)
+    public void pushExpiryAlertsSse() {
+        LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+
+        List<Payment> expiringToday = paymentRepository.findAll().stream()
+                .filter(p -> p.getPlanEndDate() != null
+                          && p.getPlanEndDate().isAfter(startOfDay)
+                          && p.getPlanEndDate().isBefore(endOfDay)
+                          && "SUCCESS".equalsIgnoreCase(p.getPaymentStatus()))
+                .toList();
+
+        Set<Long> notified = new HashSet<>();
+        for (Payment payment : expiringToday) {
+            User user = payment.getUser();
+            if (user == null || user.getId() == null) continue;
+            if (notified.contains(user.getId())) continue;
+            
+            notificationService.broadcast("EXPIRY_ALERT", java.util.Map.of(
+                    "userId", user.getId(),
+                    "email", user.getEmail(),
+                    "expiryDate", payment.getPlanEndDate()
+            ));
+            notified.add(user.getId());
+        }
     }
 
     /**
