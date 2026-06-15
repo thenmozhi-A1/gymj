@@ -8,7 +8,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    @Value("${ALLOWED_ORIGIN:https://gym-ii9k.vercel.app}")
+    @Value("${ALLOWED_ORIGIN:https://gym-ii9k.vercel.app,http://localhost:5173}")
     private String allowedOrigin;
 
     @Override
