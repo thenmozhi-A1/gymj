@@ -62,112 +62,15 @@ public class DataInitializer {
                 System.out.println("ℹ️ Admin account already exists.");
             }
 
-            // Create sample users for attendance data
-            String[] sampleUsers = {
-                "john.doe@example.com", "jane.smith@example.com", "mike.johnson@example.com",
-                "sarah.williams@example.com", "david.brown@example.com", "emily.davis@example.com"
-            };
-            
-            String[] sampleNames = {
-                "John Doe", "Jane Smith", "Mike Johnson", 
-                "Sarah Williams", "David Brown", "Emily Davis"
-            };
-
-            for (int i = 0; i < sampleUsers.length; i++) {
-                if (!userRepository.existsByEmail(sampleUsers[i])) {
-                    User user = new User();
-                    user.setFullName(sampleNames[i]);
-                    user.setEmail(sampleUsers[i]);
-                    user.setPassword("password123");
-                    user.setRole("MEMBER");
-                    user.setStatus("ACTIVE");
-                    user.setMembershipType("Standard");
-                    userRepository.save(user);
-                    System.out.println("✅ Sample user created: " + sampleNames[i]);
-                }
+            // Cleanup existing sample data if present in DB
+            try {
+                jdbcTemplate.execute("DELETE FROM attendance WHERE user_id IN (SELECT id FROM users WHERE email IN ('john.doe@example.com', 'jane.smith@example.com', 'mike.johnson@example.com', 'sarah.williams@example.com', 'david.brown@example.com', 'emily.davis@example.com'))");
+                jdbcTemplate.execute("DELETE FROM payment WHERE user_id IN (SELECT id FROM users WHERE email IN ('john.doe@example.com', 'jane.smith@example.com', 'mike.johnson@example.com', 'sarah.williams@example.com', 'david.brown@example.com', 'emily.davis@example.com'))");
+                jdbcTemplate.execute("DELETE FROM users WHERE email IN ('john.doe@example.com', 'jane.smith@example.com', 'mike.johnson@example.com', 'sarah.williams@example.com', 'david.brown@example.com', 'emily.davis@example.com')");
+                System.out.println("✅ Cleaned up any old sample data from the database.");
+            } catch (Exception e) {
+                System.out.println("ℹ️ No sample data to clean up, or error during cleanup.");
             }
-
-            // Add sample attendance data for the last 7 days
-            LocalDate today = LocalDate.now();
-            for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
-                LocalDate date = today.minusDays(dayOffset);
-                
-                for (int i = 0; i < sampleUsers.length; i++) {
-                    User user = userRepository.findByEmail(sampleUsers[i]).orElse(null);
-                    if (user != null) {
-                        // Check if we need to add attendance (simplified to avoid complex queries, just create it)
-                        try {
-                            Attendance attendance = new Attendance();
-                            attendance.setUser(user);
-                            attendance.setAttendanceDate(date);
-                            
-                            // Random check-in times between 6 AM and 10 AM
-                            int hour = 6 + (int)(Math.random() * 4);
-                            int minute = (int)(Math.random() * 60);
-                            attendance.setCheckInTime(LocalTime.of(hour, minute));
-                            
-                            // Random check-out times between 8 AM and 12 PM
-                            int outHour = 8 + (int)(Math.random() * 4);
-                            int outMinute = (int)(Math.random() * 60);
-                            attendance.setCheckOutTime(LocalTime.of(outHour, outMinute));
-                            
-                            attendance.setMethod(com.example.gym.entity.AttendanceMethod.MANUAL);
-                            attendanceRepository.save(attendance);
-                        } catch (Exception ignored) {}
-                    }
-                }
-            }
-            System.out.println("✅ Sample attendance data added for the last 7 days.");
-
-            // Add sample payment/revenue data for the last 6 months
-            String[] planNames = {"Standard Plan", "Pro Membership", "Elite Yearly", "VIP Yearly"};
-            double[] planAmounts = {5000.0, 9000.0, 12000.0, 18000.0};
-            String[] paymentMethods = {"Razorpay", "UPI", "Credit Card", "Debit Card"};
-            
-            for (int i = 0; i < sampleUsers.length; i++) {
-                User user = userRepository.findByEmail(sampleUsers[i]).orElse(null);
-                if (user != null) {
-                    // Create 2-3 payments per user over the last 6 months
-                    int numPayments = 2 + (int)(Math.random() * 2);
-                    for (int p = 0; p < numPayments; p++) {
-                        Payment payment = new Payment();
-                        payment.setUser(user);
-                        
-                        // Random plan and amount
-                        int planIndex = (int)(Math.random() * planNames.length);
-                        payment.setPlanName(planNames[planIndex]);
-                        payment.setAmount(planAmounts[planIndex]);
-                        
-                        // Random payment method
-                        payment.setPaymentMethod(paymentMethods[(int)(Math.random() * paymentMethods.length)]);
-                        
-                        // Generate transaction ID
-                        payment.setTransactionId("TXN" + System.currentTimeMillis() + (int)(Math.random() * 10000));
-                        
-                        // Set payment status
-                        payment.setPaymentStatus("COMPLETED");
-                        
-                        // Random payment date within last 6 months
-                        int monthsBack = (int)(Math.random() * 6);
-                        int daysBack = (int)(Math.random() * 28);
-                        LocalDateTime paymentDate = LocalDateTime.now().minusMonths(monthsBack).minusDays(daysBack);
-                        payment.setPaymentDate(paymentDate);
-                        
-                        // Set plan start and end dates
-                        payment.setPlanStartDate(paymentDate.toLocalDate().atStartOfDay());
-                        if (planNames[planIndex].contains("Yearly")) {
-                            payment.setPlanEndDate(paymentDate.plusYears(1).toLocalDate().atStartOfDay());
-                        } else if (planNames[planIndex].contains("6 Months")) {
-                            payment.setPlanEndDate(paymentDate.plusMonths(6).toLocalDate().atStartOfDay());
-                        } else {
-                            payment.setPlanEndDate(paymentDate.plusMonths(1).toLocalDate().atStartOfDay());
-                        }
-                        
-                        paymentRepository.save(payment);
-                    }
-                }
-            }
-            System.out.println("✅ Sample payment/revenue data added for the last 6 months.");
         };
     }
 }
