@@ -4,11 +4,13 @@ import com.example.gym.entity.MembershipPlan;
 import com.example.gym.repository.MembershipPlanRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class MembershipPlanService {
 
     private final MembershipPlanRepository membershipPlanRepository;
