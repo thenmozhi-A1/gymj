@@ -24,14 +24,22 @@ public class MembershipPlanController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MembershipPlan> createPlan(@RequestBody MembershipPlan plan) {
-        return ResponseEntity.ok(membershipPlanService.createPlan(plan));
+    public ResponseEntity<?> createPlan(@RequestBody MembershipPlan plan) {
+        try {
+            return ResponseEntity.ok(membershipPlanService.createPlan(plan));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage() != null ? e.getMessage() : e.toString()));
+        }
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<MembershipPlan> updatePlan(@PathVariable Long id, @RequestBody MembershipPlan plan) {
-        return ResponseEntity.ok(membershipPlanService.updatePlan(id, plan));
+    public ResponseEntity<?> updatePlan(@PathVariable Long id, @RequestBody MembershipPlan plan) {
+        try {
+            return ResponseEntity.ok(membershipPlanService.updatePlan(id, plan));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage() != null ? e.getMessage() : e.toString()));
+        }
     }
 
     @DeleteMapping("/{id}")

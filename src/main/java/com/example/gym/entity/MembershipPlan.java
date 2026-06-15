@@ -53,5 +53,5 @@ public class MembershipPlan {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "membership_plan_features", joinColumns = @JoinColumn(name = "membership_plan_id"))
     @Column(name = "feature")
-    private List<String> features;
+    private List<String> features = new java.util.ArrayList<>();
 }

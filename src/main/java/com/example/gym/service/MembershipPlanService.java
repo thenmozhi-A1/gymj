@@ -20,6 +20,9 @@ public class MembershipPlanService {
     }
 
     public MembershipPlan createPlan(MembershipPlan plan) {
+        if (plan.getFeatures() == null) {
+            plan.setFeatures(new java.util.ArrayList<>());
+        }
         return membershipPlanRepository.save(plan);
     }
 
@@ -40,6 +43,9 @@ public class MembershipPlanService {
         plan.setAccentColor(planDetails.getAccentColor());
         
         if (planDetails.getFeatures() != null) {
+            if (plan.getFeatures() == null) {
+                plan.setFeatures(new java.util.ArrayList<>());
+            }
             plan.getFeatures().clear();
             plan.getFeatures().addAll(planDetails.getFeatures());
         }
