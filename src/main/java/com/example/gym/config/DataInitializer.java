@@ -53,11 +53,11 @@ public class DataInitializer {
                 User admin = new User();
                 admin.setFullName("Gym Admin");
                 admin.setEmail(adminEmail);
-                admin.setPassword("admin");
+                admin.setPassword("Admin@123");
                 admin.setRole("ADMIN");
                 admin.setStatus("ACTIVE");
                 userRepository.save(admin);
-                System.out.println("✅ Default Admin account created: " + adminEmail + " / admin");
+                System.out.println("✅ Default Admin account created: " + adminEmail + " / Admin@123");
             } else {
                 System.out.println("ℹ️ Admin account already exists.");
             }
