@@ -13,6 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -25,6 +29,18 @@ import java.util.stream.Collectors;
 public class AttendanceServiceImpl implements AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @PostConstruct
+    public void fixConstraints() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE attendance DROP FOREIGN KEY FKrogowg5617tejib9qe94rvgyi");
+        } catch (Exception e) {
+            // ignore if it doesn't exist
+        }
+    }
     private final UserRepository userRepository;
     private final StaffRepository staffRepository;
 
