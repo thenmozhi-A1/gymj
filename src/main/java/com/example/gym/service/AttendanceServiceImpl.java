@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 public class AttendanceServiceImpl implements AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
+    private final NotificationService notificationService;
     
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -64,6 +65,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .build();
 
         Attendance saved = attendanceRepository.save(attendance);
+        notificationService.broadcast("ATTENDANCE", java.util.Map.of("name", user.getFullName() != null ? user.getFullName() : user.getEmail()));
         return mapToResponse(saved);
     }
 
@@ -86,6 +88,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .build();
 
         Attendance saved = attendanceRepository.save(attendance);
+        notificationService.broadcast("ATTENDANCE", java.util.Map.of("name", staff.getUser() != null && staff.getUser().getFullName() != null ? staff.getUser().getFullName() : "Staff Member"));
         return mapToResponse(saved);
     }
 
