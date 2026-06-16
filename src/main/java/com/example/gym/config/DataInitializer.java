@@ -72,6 +72,7 @@ public class DataInitializer {
                     "CREATE TABLE IF NOT EXISTS membership_plan_features (" +
                     "membership_plan_id BIGINT NOT NULL, " +
                     "feature VARCHAR(255) NOT NULL, " +
+                    "PRIMARY KEY (membership_plan_id, feature), " +
                     "FOREIGN KEY (membership_plan_id) REFERENCES membership_plans(id) ON DELETE CASCADE" +
                     ") ENGINE=InnoDB"
                 );
