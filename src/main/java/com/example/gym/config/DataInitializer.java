@@ -15,11 +15,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 @Configuration
 public class DataInitializer {
 
     @Bean
-    public CommandLineRunner initData(UserRepository userRepository, AttendanceRepository attendanceRepository, PaymentRepository paymentRepository, JdbcTemplate jdbcTemplate) {
+    public CommandLineRunner initData(UserRepository userRepository, AttendanceRepository attendanceRepository, PaymentRepository paymentRepository, JdbcTemplate jdbcTemplate, PasswordEncoder passwordEncoder) {
         return args -> {
             // Guarantee 'staffs' table exists in database
             try {
@@ -49,18 +51,14 @@ public class DataInitializer {
             }
 
             String adminEmail = "admin@gym.com";
-            if (!userRepository.existsByEmail(adminEmail)) {
-                User admin = new User();
-                admin.setFullName("Gym Admin");
-                admin.setEmail(adminEmail);
-                admin.setPassword("admin");
-                admin.setRole("ADMIN");
-                admin.setStatus("ACTIVE");
-                userRepository.save(admin);
-                System.out.println("✅ Default Admin account created: " + adminEmail + " / admin");
-            } else {
-                System.out.println("ℹ️ Admin account already exists.");
-            }
+            User admin = userRepository.findByEmail(adminEmail).orElse(new User());
+            admin.setFullName("Gym Admin");
+            admin.setEmail(adminEmail);
+            admin.setPassword(passwordEncoder.encode("admin"));
+            admin.setRole("ADMIN");
+            admin.setStatus("ACTIVE");
+            userRepository.save(admin);
+            System.out.println("✅ Default Admin account created/updated: " + adminEmail + " / admin");
 
             // Create sample users for attendance data
             String[] sampleUsers = {
@@ -78,7 +76,7 @@ public class DataInitializer {
                     User user = new User();
                     user.setFullName(sampleNames[i]);
                     user.setEmail(sampleUsers[i]);
-                    user.setPassword("password123");
+                    user.setPassword(passwordEncoder.encode("password123"));
                     user.setRole("MEMBER");
                     user.setStatus("ACTIVE");
                     user.setMembershipType("Standard");
