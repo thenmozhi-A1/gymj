@@ -50,6 +50,36 @@ public class DataInitializer {
                 System.err.println("❌ Failed to verify/create 'staffs' table: " + e.getMessage());
             }
 
+            // Guarantee 'membership_plans' tables exist in database
+            try {
+                jdbcTemplate.execute(
+                    "CREATE TABLE IF NOT EXISTS membership_plans (" +
+                    "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                    "title VARCHAR(255) NOT NULL, " +
+                    "price VARCHAR(255) NOT NULL, " +
+                    "duration VARCHAR(255) NOT NULL, " +
+                    "badge VARCHAR(255), " +
+                    "is_popular BOOLEAN DEFAULT FALSE, " +
+                    "is_premium BOOLEAN DEFAULT FALSE, " +
+                    "image_url VARCHAR(1000), " +
+                    "accent_color VARCHAR(255), " +
+                    "rating DOUBLE DEFAULT 0.0, " +
+                    "user_count VARCHAR(255), " +
+                    "bonus VARCHAR(255)" +
+                    ") ENGINE=InnoDB"
+                );
+                jdbcTemplate.execute(
+                    "CREATE TABLE IF NOT EXISTS membership_plan_features (" +
+                    "membership_plan_id BIGINT NOT NULL, " +
+                    "feature VARCHAR(255) NOT NULL, " +
+                    "FOREIGN KEY (membership_plan_id) REFERENCES membership_plans(id) ON DELETE CASCADE" +
+                    ") ENGINE=InnoDB"
+                );
+                System.out.println("✅ Database tables for 'membership_plans' checked/created successfully.");
+            } catch (Exception e) {
+                System.err.println("❌ Failed to verify/create 'membership_plans' tables: " + e.getMessage());
+            }
+
             String adminEmail = "admin@gym.com";
             User admin = userRepository.findByEmail(adminEmail).orElse(new User());
             admin.setFullName("Gym Admin");
