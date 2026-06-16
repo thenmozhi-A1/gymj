@@ -84,7 +84,7 @@ public class AttendanceController {
 
     /** PUT /api/attendance/{id}/checkout — Update check-out time */
     @PutMapping("/{id}/checkout")
-    public ResponseEntity<?> updateCheckOut(@PathVariable Long id, @RequestBody Attendance attendance) {
+    public ResponseEntity<?> updateCheckOut(@PathVariable Long id, @RequestBody(required = false) Attendance attendance) {
         try {
             return ResponseEntity.ok(attendanceService.updateCheckOut(id, attendance));
         } catch (RuntimeException e) {

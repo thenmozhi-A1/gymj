@@ -39,6 +39,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/login", "/api/users/register", "/api/users/biometric-login").permitAll() // Legacy endpoints
                 .requestMatchers(HttpMethod.GET, "/api/feedbacks").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/membership-plans").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/consultations").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

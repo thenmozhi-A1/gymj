@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class GymApplication {
 
 	public static void main(String[] args) {
+		// Trigger Render Deploy
 		SpringApplication.run(GymApplication.class, args);
 	}
 

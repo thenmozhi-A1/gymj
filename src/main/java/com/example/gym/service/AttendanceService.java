@@ -78,8 +78,17 @@ public class AttendanceService {
     public Attendance updateCheckOut(Long id, Attendance updated) {
         Attendance existing = attendanceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Attendance record not found: " + id));
-        existing.setCheckOutTime(updated.getCheckOutTime());
-        existing.setNotes(updated.getNotes());
+        
+        if (updated != null && updated.getCheckOutTime() != null) {
+            existing.setCheckOutTime(updated.getCheckOutTime());
+        } else {
+            existing.setCheckOutTime(java.time.LocalTime.now());
+        }
+        
+        if (updated != null && updated.getNotes() != null) {
+            existing.setNotes(updated.getNotes());
+        }
+        
         return attendanceRepository.save(existing);
     }
 
