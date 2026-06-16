@@ -1,52 +1,66 @@
 package com.example.gym.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
 @Table(name = "attendance")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class Attendance {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "staff_id")
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "staff_id", nullable = true)
     private Staff staff;
 
-    @Column(nullable = false)
     private LocalDate attendanceDate;
-
-    @Column(nullable = false)
     private LocalTime checkInTime;
-
     private LocalTime checkOutTime;
+    private String status;
+    private String notes;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private AttendanceMethod method;
+    public Attendance() {}
 
-    @Column(updatable = false)
-    private Instant createdAt;
+    public Attendance(Long id, User user, LocalDate attendanceDate, LocalTime checkInTime, LocalTime checkOutTime, String status, String notes) {
+        this.id = id;
+        this.user = user;
+        this.attendanceDate = attendanceDate;
+        this.checkInTime = checkInTime;
+        this.checkOutTime = checkOutTime;
+        this.status = status;
+        this.notes = notes;
+    }
 
     @PrePersist
-    protected void onCreate() {
-        this.createdAt = Instant.now();
+    public void prePersist() {
+        if (this.attendanceDate == null) this.attendanceDate = LocalDate.now();
+        if (this.checkInTime == null) this.checkInTime = LocalTime.now();
+        if (this.status == null) this.status = "PRESENT";
     }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+    public Staff getStaff() { return staff; }
+    public void setStaff(Staff staff) { this.staff = staff; }
+    public LocalDate getAttendanceDate() { return attendanceDate; }
+    public void setAttendanceDate(LocalDate attendanceDate) { this.attendanceDate = attendanceDate; }
+    public LocalTime getCheckInTime() { return checkInTime; }
+    public void setCheckInTime(LocalTime checkInTime) { this.checkInTime = checkInTime; }
+    public LocalTime getCheckOutTime() { return checkOutTime; }
+    public void setCheckOutTime(LocalTime checkOutTime) { this.checkOutTime = checkOutTime; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 }

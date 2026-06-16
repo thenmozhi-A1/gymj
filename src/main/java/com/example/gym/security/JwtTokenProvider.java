@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
@@ -28,16 +27,16 @@ public class JwtTokenProvider {
     }
 
     public String generateAccessToken(User user) {
-        Instant now = Instant.now();
-        Instant expiryInstant = now.plusMillis(jwtExpirationInMs);
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
         return Jwts.builder()
                 .subject(Long.toString(user.getId()))
                 .claim("email", user.getEmail())
                 .claim("role", user.getRole())
                 .claim("name", user.getFullName())
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(expiryInstant))
+                .issuedAt(now)
+                .expiration(expiryDate)
                 .signWith(getSigningKey())
                 .compact();
     }
