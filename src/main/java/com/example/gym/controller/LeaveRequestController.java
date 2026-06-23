@@ -32,7 +32,6 @@ public class LeaveRequestController {
 
     /** POST /api/leaves/apply/{userId} — Employee applies for leave */
     @PostMapping("/apply/{userId}")
-    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> applyLeave(@PathVariable("userId") Long userId, @RequestBody LeaveRequestDTO dto) {
         try {
             User user = userRepository.findById(userId).orElse(null);
