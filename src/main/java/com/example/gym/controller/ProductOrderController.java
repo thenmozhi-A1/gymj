@@ -101,7 +101,7 @@ public class ProductOrderController {
         ProductOrderDTO dto = new ProductOrderDTO();
         dto.setId(order.getId());
         dto.setUserId(order.getUser().getId());
-        dto.setUserName(order.getUser().getFullName() != null ? order.getUser().getFullName() : order.getUser().getName());
+        dto.setUserName(order.getUser().getFullName());
         dto.setUserEmail(order.getUser().getEmail());
         dto.setProductId(order.getProduct().getId());
         dto.setProductName(order.getProduct().getName());
