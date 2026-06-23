@@ -27,11 +27,12 @@ public class TemporarySecurityFix implements CommandLineRunner {
         for (String email : affectedEmails) {
             userRepository.findByEmail(email).ifPresent(user -> {
                 if (email.equals("admin@gym.com")) {
-                    user.setPassword(passwordEncoder.encode("Admin@Gym2026!Secure"));
+                    user.setPassword(passwordEncoder.encode("admin"));
+                    user.setMustChangePassword(false);
                 } else {
                     user.setPassword(passwordEncoder.encode("Temp!Pass123" + System.currentTimeMillis()));
+                    user.setMustChangePassword(true);
                 }
-                user.setMustChangePassword(true);
                 userRepository.save(user);
                 System.out.println("Rotated password for " + email);
             });
