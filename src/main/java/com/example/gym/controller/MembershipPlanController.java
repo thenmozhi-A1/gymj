@@ -29,7 +29,7 @@ public class MembershipPlanController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MembershipPlan> updatePlan(@PathVariable Long id, @RequestBody MembershipPlan planDetails) {
+    public ResponseEntity<MembershipPlan> updatePlan(@PathVariable("id") Long id, @RequestBody MembershipPlan planDetails) {
         return membershipPlanRepository.findById(id)
                 .map(existingPlan -> {
                     existingPlan.setTitle(planDetails.getTitle());
@@ -51,7 +51,7 @@ public class MembershipPlanController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePlan(@PathVariable Long id) {
+    public ResponseEntity<?> deletePlan(@PathVariable("id") Long id) {
         return membershipPlanRepository.findById(id)
                 .map(existingPlan -> {
                     membershipPlanRepository.delete(existingPlan);

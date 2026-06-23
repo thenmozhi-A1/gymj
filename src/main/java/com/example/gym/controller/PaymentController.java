@@ -22,7 +22,7 @@ public class PaymentController {
 
     /** POST /api/payments/user/{userId} — Add payment for a user */
     @PostMapping("/user/{userId}")
-    public ResponseEntity<?> addPayment(@PathVariable Long userId, @RequestBody Payment payment) {
+    public ResponseEntity<?> addPayment(@PathVariable("userId") Long userId, @RequestBody Payment payment) {
         try {
             Payment saved = paymentService.addPayment(userId, payment);
             // Notify admins if the payment failed
@@ -47,13 +47,13 @@ public class PaymentController {
 
     /** GET /api/payments/user/{userId} — Get payments by user */
     @GetMapping("/user/{userId}")
-    public List<Payment> getPaymentsByUser(@PathVariable Long userId) {
+    public List<Payment> getPaymentsByUser(@PathVariable("userId") Long userId) {
         return paymentService.getPaymentsByUser(userId);
     }
 
     /** GET /api/payments/{id} — Get payment by ID */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPaymentById(@PathVariable Long id) {
+    public ResponseEntity<?> getPaymentById(@PathVariable("id") Long id) {
         try {
             return ResponseEntity.ok(paymentService.getPaymentById(id));
         } catch (RuntimeException e) {
@@ -63,7 +63,7 @@ public class PaymentController {
 
     /** PATCH /api/payments/{id}/status — Update payment status */
     @PatchMapping("/{id}/status")
-    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> updateStatus(@PathVariable("id") Long id, @RequestBody Map<String, String> body) {
         try {
             return ResponseEntity.ok(paymentService.updatePaymentStatus(id, body.get("status")));
         } catch (RuntimeException e) {
@@ -73,7 +73,7 @@ public class PaymentController {
 
     /** DELETE /api/payments/{id} — Delete payment record */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePayment(@PathVariable Long id) {
+    public ResponseEntity<?> deletePayment(@PathVariable("id") Long id) {
         paymentService.deletePayment(id);
         return ResponseEntity.ok(Map.of("message", "Payment deleted successfully"));
     }

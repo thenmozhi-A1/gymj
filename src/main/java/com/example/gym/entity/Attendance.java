@@ -27,6 +27,10 @@ public class Attendance {
     private String status;
     private String notes;
 
+    private Boolean isLate = false;
+    private String correctionReason;
+    private String correctionStatus; // NONE, PENDING, APPROVED, REJECTED
+
     public Attendance() {}
 
     public Attendance(Long id, User user, LocalDate attendanceDate, LocalTime checkInTime, LocalTime checkOutTime, String status, String notes) {
@@ -44,6 +48,8 @@ public class Attendance {
         if (this.attendanceDate == null) this.attendanceDate = LocalDate.now();
         if (this.checkInTime == null) this.checkInTime = LocalTime.now();
         if (this.status == null) this.status = "PRESENT";
+        if (this.isLate == null) this.isLate = false;
+        if (this.correctionStatus == null) this.correctionStatus = "NONE";
     }
 
     // Getters and Setters
@@ -63,4 +69,10 @@ public class Attendance {
     public void setStatus(String status) { this.status = status; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public Boolean getIsLate() { return isLate; }
+    public void setIsLate(Boolean isLate) { this.isLate = isLate; }
+    public String getCorrectionReason() { return correctionReason; }
+    public void setCorrectionReason(String correctionReason) { this.correctionReason = correctionReason; }
+    public String getCorrectionStatus() { return correctionStatus; }
+    public void setCorrectionStatus(String correctionStatus) { this.correctionStatus = correctionStatus; }
 }

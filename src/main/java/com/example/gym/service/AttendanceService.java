@@ -29,19 +29,20 @@ public class AttendanceService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
         attendance.setUser(user);
+        checkIfLate(attendance);
         return attendanceRepository.save(attendance);
     }
 
-    /** Mark attendance (check-in) for a staff */
     public Attendance markStaffAttendance(Long userId, Attendance attendance) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
         Staff staff = user.getStaffDetails();
         if (staff == null) {
-             throw new RuntimeException("Staff details not found for user: " + userId);
+            throw new RuntimeException("Staff not found with id: " + userId);
         }
         attendance.setStaff(staff);
-        attendance.setUser(user); // Optional: also link to user
+        attendance.setUser(user);
+        checkIfLate(attendance);
         return attendanceRepository.save(attendance);
     }
 
@@ -95,5 +96,36 @@ public class AttendanceService {
     /** Delete attendance record */
     public void deleteAttendance(Long id) {
         attendanceRepository.deleteById(id);
+    }
+
+    public Attendance requestCorrection(Long id, String reason) {
+        Attendance existing = attendanceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Attendance record not found"));
+        existing.setCorrectionReason(reason);
+        existing.setCorrectionStatus("PENDING");
+        return attendanceRepository.save(existing);
+    }
+
+    public Attendance updateCorrectionStatus(Long id, String status) {
+        Attendance existing = attendanceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Attendance record not found"));
+        existing.setCorrectionStatus(status);
+        if ("APPROVED".equals(status)) {
+            // Here you might normally apply the requested correction times
+            // For now, we just approve it
+        }
+        return attendanceRepository.save(existing);
+    }
+
+    private void checkIfLate(Attendance attendance) {
+        if (attendance.getCheckInTime() != null) {
+            // Assume 09:15 AM is the cutoff for late
+            java.time.LocalTime cutoff = java.time.LocalTime.of(9, 15);
+            if (attendance.getCheckInTime().isAfter(cutoff)) {
+                attendance.setIsLate(true);
+            } else {
+                attendance.setIsLate(false);
+            }
+        }
     }
 }

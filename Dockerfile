@@ -6,7 +6,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Run Stage
-FROM eclipse-temurin:17-jdk-jammy
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 # Use the specific JAR name from pom.xml
 COPY --from=build /app/target/gym-0.0.1-SNAPSHOT.jar app.jar

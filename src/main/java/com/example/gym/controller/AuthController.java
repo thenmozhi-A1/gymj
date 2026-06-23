@@ -6,11 +6,14 @@ import com.example.gym.repository.RefreshTokenRepository;
 import com.example.gym.repository.UserRepository;
 import com.example.gym.security.JwtTokenProvider;
 import com.example.gym.service.UserService;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.gym.entity.PasswordResetToken;
 import com.example.gym.repository.PasswordResetTokenRepository;
@@ -25,7 +28,6 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 @RestController
@@ -73,9 +75,13 @@ public class AuthController {
             );
             refreshTokenRepository.save(rt);
 
+            ResponseCookie jwtCookie = ResponseCookie.from("accessToken", accessToken)
+                    .httpOnly(true).secure(false).sameSite("Lax").path("/").maxAge(15 * 60).build();
+                    
+            ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", rawRefreshToken)
+                    .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(30 * 24 * 60 * 60).build();
+
             Map<String, Object> response = new HashMap<>();
-            response.put("accessToken", accessToken);
-            response.put("refreshToken", rawRefreshToken);
             response.put("user", Map.of(
                     "id", user.getId(),
                     "name", user.getFullName(),
@@ -84,15 +90,21 @@ public class AuthController {
                     "mustChangePassword", user.getMustChangePassword() != null ? user.getMustChangePassword() : false
             ));
 
-            return ResponseEntity.ok(response);
+            response.put("accessToken", accessToken);
+            response.put("refreshToken", rawRefreshToken);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                    .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                    .body(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         }
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(@RequestBody Map<String, String> request) {
-        String rawRefreshToken = request.get("refreshToken");
+    public ResponseEntity<?> refresh(@CookieValue(value = "refreshToken", required = false) String cookieRefreshToken, @RequestBody(required = false) Map<String, String> requestBody) {
+        String rawRefreshToken = cookieRefreshToken != null ? cookieRefreshToken : (requestBody != null ? requestBody.get("refreshToken") : null);
         if (rawRefreshToken == null) return ResponseEntity.badRequest().body(Map.of("error", "Refresh token required"));
 
         String hash = hashToken(rawRefreshToken);
@@ -120,16 +132,24 @@ public class AuthController {
         );
         refreshTokenRepository.save(newToken);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("accessToken", newAccessToken);
-        response.put("refreshToken", newRawRefreshToken);
+        ResponseCookie jwtCookie = ResponseCookie.from("accessToken", newAccessToken)
+                .httpOnly(true).secure(false).sameSite("Lax").path("/").maxAge(15 * 60).build();
+                
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", newRawRefreshToken)
+                .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(30 * 24 * 60 * 60).build();
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(Map.of(
+                    "message", "Token refreshed successfully",
+                    "accessToken", newAccessToken,
+                    "refreshToken", newRawRefreshToken
+                ));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestBody Map<String, String> request) {
-        String rawRefreshToken = request.get("refreshToken");
+    public ResponseEntity<?> logout(@CookieValue(value = "refreshToken", required = false) String rawRefreshToken) {
         if (rawRefreshToken != null) {
             String hash = hashToken(rawRefreshToken);
             Optional<RefreshToken> rtOpt = refreshTokenRepository.findByTokenHash(hash);
@@ -138,7 +158,16 @@ public class AuthController {
                 refreshTokenRepository.save(rt);
             });
         }
-        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+        
+        ResponseCookie clearJwt = ResponseCookie.from("accessToken", "")
+                .httpOnly(true).secure(false).sameSite("Lax").path("/").maxAge(0).build();
+        ResponseCookie clearRefresh = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(0).build();
+                
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearJwt.toString())
+                .header(HttpHeaders.SET_COOKIE, clearRefresh.toString())
+                .body(Map.of("message", "Logged out successfully"));
     }
 
     @GetMapping("/me")
@@ -255,10 +284,9 @@ public class AuthController {
         }
     }
 
+    @Transactional
     private void revokeAllUserTokens(Long userId) {
-        // Find and revoke all refresh tokens for the user
-        // (In a real app with JPA, you'd have a custom query for this)
-        // For simplicity, we just rely on token expiration or add a manual query.
+        refreshTokenRepository.deleteByUser_Id(userId);
     }
 
     private String hashToken(String rawToken) {

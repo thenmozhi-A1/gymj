@@ -1,4 +1,5 @@
-package com.example.gym.controller; 
+package com.example.gym.controller;
+import org.springframework.transaction.annotation.Transactional; 
 import com.example.gym.dto.StaffDTO;
 import com.example.gym.entity.Staff;
 import com.example.gym.entity.User;
@@ -56,8 +57,19 @@ public class StaffController {
         staff.setSalary(staffDto.getSalary());
         staff.setTimes(staffDto.getTimes());
         staff.setSpecialty(staffDto.getSpecialty());
+        staff.setExperience(staffDto.getExperience());
         staff.setLeaves(staffDto.getLeaves() != null ? staffDto.getLeaves() : 0);
         staff.setPermissions(staffDto.getPermissions() != null ? staffDto.getPermissions() : 0);
+        
+        staff.setDepartment(staffDto.getDepartment());
+        staff.setJoiningDate(staffDto.getJoiningDate());
+        staff.setEmergencyContactName(staffDto.getEmergencyContactName());
+        staff.setEmergencyContactPhone(staffDto.getEmergencyContactPhone());
+        staff.setBankName(staffDto.getBankName());
+        staff.setAccountNumber(staffDto.getAccountNumber());
+        staff.setIfscCode(staffDto.getIfscCode());
+        staff.setDocuments(staffDto.getDocuments());
+        staff.setProfilePhoto(staffDto.getProfilePhoto());
         
         // Link bidirectional
         staff.setUser(user);
@@ -93,7 +105,7 @@ public class StaffController {
 
     /** GET /api/v1/staffs/{id} — Get staff by ID */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getStaffById(@PathVariable Long id) {
+    public ResponseEntity<?> getStaffById(@PathVariable("id") Long id) {
         return userRepository.findById(id)
                 .map(user -> ResponseEntity.ok(mapToDTO(user)))
                 .orElse(ResponseEntity.notFound().build());
@@ -101,7 +113,7 @@ public class StaffController {
 
     /** PUT /api/v1/staffs/{id} — Update staff details */
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateStaff(@PathVariable Long id, @Valid @RequestBody StaffDTO updatedStaffDto) {
+    public ResponseEntity<?> updateStaff(@PathVariable("id") Long id, @Valid @RequestBody StaffDTO updatedStaffDto) {
         return userRepository.findById(id)
                 .map(existingUser -> {
                     existingUser.setFullName(updatedStaffDto.getFullName());
@@ -119,8 +131,19 @@ public class StaffController {
                     staff.setSalary(updatedStaffDto.getSalary());
                     staff.setTimes(updatedStaffDto.getTimes());
                     staff.setSpecialty(updatedStaffDto.getSpecialty());
+                    staff.setExperience(updatedStaffDto.getExperience());
                     staff.setLeaves(updatedStaffDto.getLeaves() != null ? updatedStaffDto.getLeaves() : staff.getLeaves());
                     staff.setPermissions(updatedStaffDto.getPermissions() != null ? updatedStaffDto.getPermissions() : staff.getPermissions());
+                    
+                    if (updatedStaffDto.getDepartment() != null) staff.setDepartment(updatedStaffDto.getDepartment());
+                    if (updatedStaffDto.getJoiningDate() != null) staff.setJoiningDate(updatedStaffDto.getJoiningDate());
+                    if (updatedStaffDto.getEmergencyContactName() != null) staff.setEmergencyContactName(updatedStaffDto.getEmergencyContactName());
+                    if (updatedStaffDto.getEmergencyContactPhone() != null) staff.setEmergencyContactPhone(updatedStaffDto.getEmergencyContactPhone());
+                    if (updatedStaffDto.getBankName() != null) staff.setBankName(updatedStaffDto.getBankName());
+                    if (updatedStaffDto.getAccountNumber() != null) staff.setAccountNumber(updatedStaffDto.getAccountNumber());
+                    if (updatedStaffDto.getIfscCode() != null) staff.setIfscCode(updatedStaffDto.getIfscCode());
+                    if (updatedStaffDto.getDocuments() != null) staff.setDocuments(updatedStaffDto.getDocuments());
+                    if (updatedStaffDto.getProfilePhoto() != null) staff.setProfilePhoto(updatedStaffDto.getProfilePhoto());
 
                     User savedUser = userRepository.save(existingUser);
                     return ResponseEntity.ok(mapToDTO(savedUser));
@@ -128,17 +151,23 @@ public class StaffController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    /** DELETE /api/v1/staffs/{id} — Delete staff */
+    /** DELETE /api/staffs/{id} — Delete staff */
+    @Transactional
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteStaff(@PathVariable Long id) {
-        if (userRepository.existsById(id)) {
-            String name = userRepository.findById(id).map(User::getFullName).orElse("id=" + id);
-            userRepository.deleteById(id);
-            auditLogService.log("DELETE_STAFF", currentAdminEmail(), id, "Staff",
-                    "Deleted staff: " + name);
-            return ResponseEntity.ok(Map.of("message", "Staff deleted successfully"));
+    public ResponseEntity<?> deleteStaff(@PathVariable("id") Long id) {
+        try {
+            if (userRepository.existsById(id)) {
+                String name = userRepository.findById(id).map(User::getFullName).orElse("id=" + id);
+                userRepository.deleteById(id);
+                auditLogService.log("DELETE_STAFF", currentAdminEmail(), id, "Staff",
+                        "Deleted staff: " + name);
+                return ResponseEntity.ok(Map.of("message", "Staff deleted successfully"));
+            }
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Failed to delete staff: " + e.getMessage()));
         }
-        return ResponseEntity.notFound().build();
     }
 
     private StaffDTO mapToDTO(User user) {
@@ -151,16 +180,25 @@ public class StaffController {
         dto.setAddress(user.getAddress());
         dto.setRole(user.getRole());
         dto.setStatus(user.getStatus());
-        dto.setFingerprintHash(user.getFingerprintHash());
-        dto.setFingerprintEnrolled(user.getFingerprintEnrolled());
 
         if (user.getStaffDetails() != null) {
             Staff staff = user.getStaffDetails();
+            dto.setStaffId(staff.getId());
             dto.setSalary(staff.getSalary());
             dto.setTimes(staff.getTimes());
             dto.setSpecialty(staff.getSpecialty());
+            dto.setExperience(staff.getExperience());
             dto.setLeaves(staff.getLeaves());
             dto.setPermissions(staff.getPermissions());
+            dto.setDepartment(staff.getDepartment());
+            dto.setJoiningDate(staff.getJoiningDate());
+            dto.setEmergencyContactName(staff.getEmergencyContactName());
+            dto.setEmergencyContactPhone(staff.getEmergencyContactPhone());
+            dto.setBankName(staff.getBankName());
+            dto.setAccountNumber(staff.getAccountNumber());
+            dto.setIfscCode(staff.getIfscCode());
+            dto.setDocuments(staff.getDocuments());
+            dto.setProfilePhoto(staff.getProfilePhoto());
         }
         return dto;
     }

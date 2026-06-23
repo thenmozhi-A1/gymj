@@ -1,5 +1,6 @@
 package com.example.gym.controller;
 
+import com.example.gym.dto.UserRegistrationDTO;
 import com.example.gym.entity.User;
 import com.example.gym.service.UserService;
 import com.example.gym.service.NotificationService;
@@ -8,17 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import com.example.gym.security.JwtTokenProvider;
-import com.example.gym.entity.RefreshToken;
-import com.example.gym.repository.RefreshTokenRepository;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,15 +18,11 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
-    private final JwtTokenProvider tokenProvider;
-    private final RefreshTokenRepository refreshTokenRepository;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
 
-    public UserController(UserService userService, JwtTokenProvider tokenProvider, RefreshTokenRepository refreshTokenRepository, NotificationService notificationService, AuditLogService auditLogService) {
+    public UserController(UserService userService, NotificationService notificationService, AuditLogService auditLogService) {
         this.userService = userService;
-        this.tokenProvider = tokenProvider;
-        this.refreshTokenRepository = refreshTokenRepository;
         this.notificationService = notificationService;
         this.auditLogService = auditLogService;
     }
@@ -48,20 +35,35 @@ public class UserController {
         return "system";
     }
 
-    private String hashToken(String rawToken) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(hashBytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 not available", e);
-        }
-    }
-
     /** POST /api/users/register — Create new account */
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody User user) {
+    public ResponseEntity<?> register(@RequestBody @jakarta.validation.Valid UserRegistrationDTO dto) {
         try {
+            User user = new User();
+            user.setFullName(dto.getFullName());
+            user.setEmail(dto.getEmail());
+            user.setPassword(dto.getPassword());
+            user.setPhone(dto.getPhone());
+            user.setAddress(dto.getAddress());
+            user.setGender(dto.getGender());
+            user.setMembershipPlan(dto.getMembershipPlan());
+            user.setDob(dto.getDob());
+            user.setAge(dto.getAge());
+            user.setCity(dto.getCity());
+            user.setHeight(dto.getHeight());
+            user.setWeight(dto.getWeight());
+            user.setBmi(dto.getBmi());
+            user.setBloodGroup(dto.getBloodGroup());
+            user.setFitnessGoal(dto.getFitnessGoal());
+            user.setStartDate(dto.getStartDate());
+            user.setExpiryDate(dto.getExpiryDate());
+            user.setReferralSource(dto.getReferralSource());
+            user.setEmergencyContactName(dto.getEmergencyContactName());
+            user.setEmergencyContactNumber(dto.getEmergencyContactNumber());
+            user.setMedicalConditions(dto.getMedicalConditions());
+            user.setAllergies(dto.getAllergies());
+            // Force role to USER for public registration
+            user.setRole("USER");
             User saved = userService.registerUser(user);
             notificationService.broadcast("NEW_MEMBER", Map.of(
                     "id", saved.getId(),
@@ -102,7 +104,7 @@ public class UserController {
 
     /** GET /api/users/{id} — Get user by ID */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
+    public ResponseEntity<?> getUserById(@PathVariable("id") Long id) {
         try {
             return ResponseEntity.ok(userService.getUserById(id));
         } catch (RuntimeException e) {
@@ -112,7 +114,7 @@ public class UserController {
 
     /** PUT /api/users/{id} — Update user profile */
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody User user) {
+    public ResponseEntity<?> updateUser(@PathVariable("id") Long id, @RequestBody User user) {
         try {
             return ResponseEntity.ok(userService.updateUser(id, user));
         } catch (RuntimeException e) {
@@ -122,15 +124,16 @@ public class UserController {
 
     /** DELETE /api/users/{id} — Delete user */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+    public ResponseEntity<?> deleteUser(@PathVariable("id") Long id) {
         try {
             User target = userService.getUserById(id);
             userService.deleteUser(id);
             auditLogService.log("DELETE_USER", currentAdminEmail(), id, "User",
                     "Deleted user: " + (target != null ? target.getFullName() + " (" + target.getEmail() + ")" : "id=" + id));
+            return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
         } catch (Exception e) {
-            userService.deleteUser(id);
+            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "Failed to delete user: " + e.getMessage()));
         }
-        return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
     }
 }

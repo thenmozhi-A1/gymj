@@ -25,7 +25,7 @@ public class AttendanceController {
 
     /** POST /api/attendance/user/{userId} — Mark attendance (check-in) */
     @PostMapping("/user/{userId}")
-    public ResponseEntity<?> markAttendance(@PathVariable Long userId, @RequestBody Attendance attendance) {
+    public ResponseEntity<?> markAttendance(@PathVariable("userId") Long userId, @RequestBody Attendance attendance) {
         try {
             Attendance saved = attendanceService.markAttendance(userId, attendance);
             notificationService.broadcast("ATTENDANCE", Map.of(
@@ -41,7 +41,7 @@ public class AttendanceController {
 
     /** POST /api/attendance/staff/{staffId} — Mark attendance (check-in) for a staff */
     @PostMapping("/staff/{staffId}")
-    public ResponseEntity<?> markStaffAttendance(@PathVariable Long staffId, @RequestBody Attendance attendance) {
+    public ResponseEntity<?> markStaffAttendance(@PathVariable("staffId") Long staffId, @RequestBody Attendance attendance) {
         try {
             return ResponseEntity.ok(attendanceService.markStaffAttendance(staffId, attendance));
         } catch (RuntimeException e) {
@@ -57,13 +57,13 @@ public class AttendanceController {
 
     /** GET /api/attendance/user/{userId} — Get all attendance for a user */
     @GetMapping("/user/{userId}")
-    public List<Attendance> getAttendanceByUser(@PathVariable Long userId) {
+    public List<Attendance> getAttendanceByUser(@PathVariable("userId") Long userId) {
         return attendanceService.getAttendanceByUser(userId);
     }
 
     /** GET /api/attendance/staff/{staffId} — Get all attendance for a staff */
     @GetMapping("/staff/{staffId}")
-    public List<Attendance> getAttendanceByStaff(@PathVariable Long staffId) {
+    public List<Attendance> getAttendanceByStaff(@PathVariable("staffId") Long staffId) {
         return attendanceService.getAttendanceByStaff(staffId);
     }
 
@@ -77,14 +77,14 @@ public class AttendanceController {
     /** GET /api/attendance/user/{userId}/date?date=2024-05-01 — Get user attendance for a specific date */
     @GetMapping("/user/{userId}/date")
     public List<Attendance> getAttendanceByUserAndDate(
-            @PathVariable Long userId,
+            @PathVariable("userId") Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return attendanceService.getAttendanceByUserAndDate(userId, date);
     }
 
     /** PUT /api/attendance/{id}/checkout — Update check-out time */
     @PutMapping("/{id}/checkout")
-    public ResponseEntity<?> updateCheckOut(@PathVariable Long id, @RequestBody(required = false) Attendance attendance) {
+    public ResponseEntity<?> updateCheckOut(@PathVariable("id") Long id, @RequestBody(required = false) Attendance attendance) {
         try {
             return ResponseEntity.ok(attendanceService.updateCheckOut(id, attendance));
         } catch (RuntimeException e) {
@@ -92,9 +92,29 @@ public class AttendanceController {
         }
     }
 
+    /** PUT /api/attendance/{id}/correction — Submit a correction request */
+    @PutMapping("/{id}/correction")
+    public ResponseEntity<?> requestCorrection(@PathVariable("id") Long id, @RequestBody Map<String, String> payload) {
+        try {
+            return ResponseEntity.ok(attendanceService.requestCorrection(id, payload.get("reason")));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /** PUT /api/attendance/{id}/correction-status — Admin approve/reject correction */
+    @PutMapping("/{id}/correction-status")
+    public ResponseEntity<?> updateCorrectionStatus(@PathVariable("id") Long id, @RequestBody Map<String, String> payload) {
+        try {
+            return ResponseEntity.ok(attendanceService.updateCorrectionStatus(id, payload.get("status")));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     /** DELETE /api/attendance/{id} — Delete attendance record */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteAttendance(@PathVariable Long id) {
+    public ResponseEntity<?> deleteAttendance(@PathVariable("id") Long id) {
         attendanceService.deleteAttendance(id);
         return ResponseEntity.ok(Map.of("message", "Attendance record deleted"));
     }

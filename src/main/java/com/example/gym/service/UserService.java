@@ -2,7 +2,6 @@ package com.example.gym.service;
 
 import com.example.gym.entity.User;
 import com.example.gym.repository.UserRepository;
-import com.example.gym.repository.StaffRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -16,12 +15,10 @@ import java.util.regex.Pattern;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final StaffRepository staffRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, StaffRepository staffRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
-        this.staffRepository = staffRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -59,14 +56,6 @@ public class UserService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             
-            // TEMPORARY BACKDOOR TO FIX ADMIN LOGIN
-            if ("admin@gym.com".equalsIgnoreCase(email) && "admin".equals(password)) {
-                user.setPassword(passwordEncoder.encode("admin"));
-                user.setFailedLoginAttempts(0);
-                user.setLockedUntil(null);
-                userRepository.save(user);
-                return user;
-            }
 
             verifyAndMigratePassword(user, password);
             return user;
@@ -80,10 +69,9 @@ public class UserService {
         LocalDateTime lockedUntil = user.getLockedUntil();
         Integer failedAttempts = user.getFailedLoginAttempts() != null ? user.getFailedLoginAttempts() : 0;
 
-        // Account lockout logic temporarily disabled for development
-        // if (lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now())) {
-        //    throw new RuntimeException("Account locked. Try again later.");
-        // }
+        if (lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now())) {
+            throw new RuntimeException("Account locked. Try again later.");
+        }
 
         boolean isMatch = false;
 
@@ -101,12 +89,12 @@ public class UserService {
         }
 
         if (!isMatch) {
-            // failedAttempts++;
-            // if (failedAttempts >= 5) {
-            //     user.setLockedUntil(LocalDateTime.now().plusMinutes(10));
-            // }
-            // user.setFailedLoginAttempts(failedAttempts);
-            // userRepository.save(user);
+            failedAttempts++;
+            if (failedAttempts >= 5) {
+                user.setLockedUntil(LocalDateTime.now().plusMinutes(10));
+            }
+            user.setFailedLoginAttempts(failedAttempts);
+            userRepository.save(user);
             throw new RuntimeException("Invalid email or password");
         }
 
@@ -116,47 +104,7 @@ public class UserService {
         userRepository.save(user);
     }
 
-    /** Biometric Login - check fingerprint hash in both Users and Staffs, with fallback email enrollment */
-    public User loginBiometric(String email, String fingerprintHash) {
-        if (fingerprintHash == null || fingerprintHash.trim().isEmpty()) {
-            throw new RuntimeException("Fingerprint hash is required");
-        }
-        
-        // 1. If email is provided, verify directly by email for maximum reliability and uniqueness
-        if (email != null && !email.trim().isEmpty()) {
-            Optional<User> userOpt = userRepository.findByEmail(email);
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
-                if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
-                    throw new RuntimeException("ACCESS DENIED: Membership is not active.");
-                }
-                
-                String dbHash = user.getFingerprintHash();
-                if (dbHash == null || dbHash.trim().isEmpty() || dbHash.startsWith("fp_") || dbHash.equalsIgnoreCase(fingerprintHash)) {
-                    user.setFingerprintHash(fingerprintHash);
-                    user.setFingerprintEnrolled(true);
-                    userRepository.save(user);
-                    return user;
-                } else {
-                    throw new RuntimeException("Fingerprint verification failed for " + email);
-                }
-            }
-        }
 
-        // 2. If email is NOT provided, search by fingerprint hash only (List-based query to avoid NonUniqueResultException)
-        java.util.List<User> matchedUsers = userRepository.findByFingerprintHash(fingerprintHash);
-        if (matchedUsers.size() == 1) {
-            User user = matchedUsers.get(0);
-            if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
-                throw new RuntimeException("ACCESS DENIED: Membership is not active.");
-            }
-            return user;
-        } else if (matchedUsers.size() > 1) {
-            throw new RuntimeException("Multiple users matched this scan. Please enter your email to identify yourself.");
-        }
-
-        throw new RuntimeException("Fingerprint not recognized. Please register or try again.");
-    }
     /** Get all users */
     public List<User> getAllUsers() {
         return userRepository.findByRoleIn(java.util.Collections.singletonList("USER"));
@@ -202,10 +150,35 @@ public class UserService {
         existing.setAddress(updatedUser.getAddress());
         existing.setGender(updatedUser.getGender());
         existing.setMembershipType(updatedUser.getMembershipType());
+        
+        // Add missing fields
+        existing.setDob(updatedUser.getDob());
+        existing.setAge(updatedUser.getAge());
+        existing.setCity(updatedUser.getCity());
+        existing.setHeight(updatedUser.getHeight());
+        existing.setWeight(updatedUser.getWeight());
+        existing.setBmi(updatedUser.getBmi());
+        existing.setBloodGroup(updatedUser.getBloodGroup());
+        existing.setFitnessGoal(updatedUser.getFitnessGoal());
+        existing.setMembershipPlan(updatedUser.getMembershipPlan());
+        existing.setStartDate(updatedUser.getStartDate());
+        existing.setExpiryDate(updatedUser.getExpiryDate());
+        existing.setReferralSource(updatedUser.getReferralSource());
+        existing.setEmergencyContactName(updatedUser.getEmergencyContactName());
+        existing.setEmergencyContactNumber(updatedUser.getEmergencyContactNumber());
+        existing.setMedicalConditions(updatedUser.getMedicalConditions());
+        existing.setAllergies(updatedUser.getAllergies());
+
+        boolean statusOrRoleChanged = !existing.getStatus().equals(updatedUser.getStatus()) || !existing.getRole().equals(updatedUser.getRole());
+        
         existing.setStatus(updatedUser.getStatus());
         existing.setRole(updatedUser.getRole());
-        existing.setFingerprintHash(updatedUser.getFingerprintHash());
-        existing.setFingerprintEnrolled(updatedUser.getFingerprintEnrolled());
+        
+        if (statusOrRoleChanged) {
+            Long currentVersion = existing.getTokenVersion() != null ? existing.getTokenVersion() : 0L;
+            existing.setTokenVersion(currentVersion + 1);
+        }
+
         return userRepository.save(existing);
     }
 

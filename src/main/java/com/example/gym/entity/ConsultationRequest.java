@@ -19,10 +19,14 @@ public class ConsultationRequest {
     private String goals;
 
     private LocalDateTime createdAt;
+    
+    private String source;
+    private String status = "NEW";
 
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        if (status == null) status = "NEW";
     }
 
     // Getters and Setters
@@ -38,4 +42,8 @@ public class ConsultationRequest {
     public void setGoals(String goals) { this.goals = goals; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }

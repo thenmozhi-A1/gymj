@@ -35,6 +35,7 @@ public class JwtTokenProvider {
                 .claim("email", user.getEmail())
                 .claim("role", user.getRole())
                 .claim("name", user.getFullName())
+                .claim("tokenVersion", user.getTokenVersion())
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
@@ -55,6 +56,10 @@ public class JwtTokenProvider {
 
     public String extractRole(String token) {
         return getClaims(token).get("role", String.class);
+    }
+
+    public Long extractTokenVersion(String token) {
+        return getClaims(token).get("tokenVersion", Long.class);
     }
 
     private Claims getClaims(String token) {

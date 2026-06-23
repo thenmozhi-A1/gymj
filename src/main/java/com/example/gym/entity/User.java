@@ -19,6 +19,7 @@ public class User {
     private String email;
 
     @Column(nullable = false)
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     private String phone;
@@ -28,9 +29,23 @@ public class User {
     private String status;
     private String role;
 
-    @Column(unique = true)
-    private String fingerprintHash;
-    private Boolean fingerprintEnrolled = false;
+    private String dob;
+    private String age;
+    private String city;
+    private String height;
+    private String weight;
+    private String bmi;
+    private String bloodGroup;
+    private String fitnessGoal;
+    private String membershipPlan;
+    private String startDate;
+    private String expiryDate;
+    private String referralSource;
+    private String emergencyContactName;
+    private String emergencyContactNumber;
+    private String medicalConditions;
+    private String allergies;
+
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @com.fasterxml.jackson.annotation.JsonManagedReference
@@ -44,6 +59,8 @@ public class User {
     private LocalDateTime lockedUntil;
     private Boolean mustChangePassword = false;
     private LocalDateTime passwordChangedAt;
+    
+    private Long tokenVersion = 0L;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @com.fasterxml.jackson.annotation.JsonIgnore
@@ -53,9 +70,17 @@ public class User {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private java.util.List<Attendance> attendances;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private java.util.List<RefreshToken> refreshTokens;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private java.util.List<PasswordResetToken> passwordResetTokens;
+
     public User() {}
 
-    public User(Long id, String fullName, String email, String password, String phone, String address, String gender, String membershipType, String status, String role, String fingerprintHash, Boolean fingerprintEnrolled, LocalDateTime createdAt) {
+    public User(Long id, String fullName, String email, String password, String phone, String address, String gender, String membershipType, String status, String role, LocalDateTime createdAt) {
         this.id = id;
         this.fullName = fullName;
         this.email = email;
@@ -66,8 +91,6 @@ public class User {
         this.membershipType = membershipType;
         this.status = status;
         this.role = role;
-        this.fingerprintHash = fingerprintHash;
-        this.fingerprintEnrolled = fingerprintEnrolled;
         this.createdAt = createdAt;
     }
 
@@ -76,7 +99,6 @@ public class User {
         this.createdAt = LocalDateTime.now();
         if (this.status == null) this.status = "ACTIVE";
         if (this.role == null) this.role = "USER";
-        if (this.fingerprintEnrolled == null) this.fingerprintEnrolled = false;
         if (this.failedLoginAttempts == null) this.failedLoginAttempts = 0;
         if (this.mustChangePassword == null) this.mustChangePassword = false;
     }
@@ -102,12 +124,41 @@ public class User {
     public void setStatus(String status) { this.status = status; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public String getDob() { return dob; }
+    public void setDob(String dob) { this.dob = dob; }
+    public String getAge() { return age; }
+    public void setAge(String age) { this.age = age; }
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+    public String getHeight() { return height; }
+    public void setHeight(String height) { this.height = height; }
+    public String getWeight() { return weight; }
+    public void setWeight(String weight) { this.weight = weight; }
+    public String getBmi() { return bmi; }
+    public void setBmi(String bmi) { this.bmi = bmi; }
+    public String getBloodGroup() { return bloodGroup; }
+    public void setBloodGroup(String bloodGroup) { this.bloodGroup = bloodGroup; }
+    public String getFitnessGoal() { return fitnessGoal; }
+    public void setFitnessGoal(String fitnessGoal) { this.fitnessGoal = fitnessGoal; }
+    public String getMembershipPlan() { return membershipPlan; }
+    public void setMembershipPlan(String membershipPlan) { this.membershipPlan = membershipPlan; }
+    public String getStartDate() { return startDate; }
+    public void setStartDate(String startDate) { this.startDate = startDate; }
+    public String getExpiryDate() { return expiryDate; }
+    public void setExpiryDate(String expiryDate) { this.expiryDate = expiryDate; }
+    public String getReferralSource() { return referralSource; }
+    public void setReferralSource(String referralSource) { this.referralSource = referralSource; }
+    public String getEmergencyContactName() { return emergencyContactName; }
+    public void setEmergencyContactName(String emergencyContactName) { this.emergencyContactName = emergencyContactName; }
+    public String getEmergencyContactNumber() { return emergencyContactNumber; }
+    public void setEmergencyContactNumber(String emergencyContactNumber) { this.emergencyContactNumber = emergencyContactNumber; }
+    public String getMedicalConditions() { return medicalConditions; }
+    public void setMedicalConditions(String medicalConditions) { this.medicalConditions = medicalConditions; }
+    public String getAllergies() { return allergies; }
+    public void setAllergies(String allergies) { this.allergies = allergies; }
     public Staff getStaffDetails() { return staffDetails; }
     public void setStaffDetails(Staff staffDetails) { this.staffDetails = staffDetails; }
-    public String getFingerprintHash() { return fingerprintHash; }
-    public void setFingerprintHash(String fingerprintHash) { this.fingerprintHash = fingerprintHash; }
-    public Boolean getFingerprintEnrolled() { return fingerprintEnrolled; }
-    public void setFingerprintEnrolled(Boolean fingerprintEnrolled) { this.fingerprintEnrolled = fingerprintEnrolled; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     
@@ -120,4 +171,6 @@ public class User {
     public void setMustChangePassword(Boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
     public LocalDateTime getPasswordChangedAt() { return passwordChangedAt; }
     public void setPasswordChangedAt(LocalDateTime passwordChangedAt) { this.passwordChangedAt = passwordChangedAt; }
+    public Long getTokenVersion() { return tokenVersion; }
+    public void setTokenVersion(Long tokenVersion) { this.tokenVersion = tokenVersion; }
 }

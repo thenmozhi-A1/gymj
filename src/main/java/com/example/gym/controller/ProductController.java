@@ -2,7 +2,6 @@ package com.example.gym.controller;
 
 import com.example.gym.entity.Product;
 import com.example.gym.repository.ProductRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,8 +14,11 @@ import java.util.Optional;
 @RequestMapping("/api/products")
 public class ProductController {
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
+
+    public ProductController(ProductRepository productRepository) {
+        this.productRepository = productRepository;
+    }
 
     @GetMapping
     public ResponseEntity<?> getAllProducts() {
@@ -33,7 +35,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateProduct(@PathVariable Long id, @RequestBody Product productDetails) {
+    public ResponseEntity<?> updateProduct(@PathVariable("id") Long id, @RequestBody Product productDetails) {
         Optional<Product> productOpt = productRepository.findById(id);
         if (!productOpt.isPresent()) {
             return ResponseEntity.notFound().build();
@@ -52,7 +54,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<?> deleteProduct(@PathVariable("id") Long id) {
         Optional<Product> productOpt = productRepository.findById(id);
         if (!productOpt.isPresent()) {
             return ResponseEntity.notFound().build();
