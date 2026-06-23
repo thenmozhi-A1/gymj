@@ -13,7 +13,7 @@ public class LeaveRequest {
     private Long id;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "staff_id", nullable = false)
+    @JoinColumn(name = "employee_id", nullable = false)
     private Staff staff;
 
     private LocalDate startDate;
