@@ -16,9 +16,6 @@ public class LeaveRequest {
     @JoinColumn(name = "staff_id", nullable = false)
     private Staff staff;
 
-    @Column(name = "employee_id", nullable = false)
-    private Long employeeId;
-
     private LocalDate startDate;
     private LocalDate endDate;
     private String leaveType; // CASUAL, SICK, PAID
@@ -33,9 +30,6 @@ public class LeaveRequest {
     public void prePersist() {
         this.appliedAt = LocalDateTime.now();
         if (this.status == null) this.status = "PENDING";
-        if (this.staff != null) {
-            this.employeeId = this.staff.getId();
-        }
     }
 
     public Long getId() { return id; }
@@ -43,9 +37,6 @@ public class LeaveRequest {
 
     public Staff getStaff() { return staff; }
     public void setStaff(Staff staff) { this.staff = staff; }
-
-    public Long getEmployeeId() { return employeeId; }
-    public void setEmployeeId(Long employeeId) { this.employeeId = employeeId; }
 
     public LocalDate getStartDate() { return startDate; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
