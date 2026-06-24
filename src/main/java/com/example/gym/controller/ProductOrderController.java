@@ -71,6 +71,7 @@ public class ProductOrderController {
             order.setUser(user);
             order.setProduct(product);
             order.setQuantity(quantity);
+            order.setUnitPrice(product.getPrice().doubleValue());
             order.setTotalPrice(product.getPrice().doubleValue() * quantity);
             order.setShippingAddress(shippingAddress);
             order.setRazorpayPaymentId(paymentId);
@@ -125,6 +126,7 @@ public class ProductOrderController {
         dto.setProductId(order.getProduct().getId());
         dto.setProductName(order.getProduct().getName());
         dto.setQuantity(order.getQuantity());
+        dto.setUnitPrice(order.getUnitPrice());
         dto.setTotalPrice(order.getTotalPrice());
         dto.setShippingAddress(order.getShippingAddress());
         dto.setRazorpayPaymentId(order.getRazorpayPaymentId());

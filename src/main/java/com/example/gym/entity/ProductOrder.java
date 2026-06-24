@@ -23,6 +23,9 @@ public class ProductOrder {
     @Column(name = "total_amount")
     private Double totalPrice;
 
+    @Column(name = "unit_price")
+    private Double unitPrice;
+
     @Column(columnDefinition = "TEXT")
     private String shippingAddress;
 
@@ -56,6 +59,9 @@ public class ProductOrder {
 
     public Double getTotalPrice() { return totalPrice; }
     public void setTotalPrice(Double totalPrice) { this.totalPrice = totalPrice; }
+
+    public Double getUnitPrice() { return unitPrice; }
+    public void setUnitPrice(Double unitPrice) { this.unitPrice = unitPrice; }
 
     public String getShippingAddress() { return shippingAddress; }
     public void setShippingAddress(String shippingAddress) { this.shippingAddress = shippingAddress; }

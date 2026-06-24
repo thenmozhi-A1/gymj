@@ -10,6 +10,7 @@ public class ProductOrderDTO {
     private Long productId;
     private String productName;
     private Integer quantity;
+    private Double unitPrice;
     private Double totalPrice;
     private String shippingAddress;
     private String razorpayPaymentId;
@@ -37,6 +38,9 @@ public class ProductOrderDTO {
 
     public Integer getQuantity() { return quantity; }
     public void setQuantity(Integer quantity) { this.quantity = quantity; }
+
+    public Double getUnitPrice() { return unitPrice; }
+    public void setUnitPrice(Double unitPrice) { this.unitPrice = unitPrice; }
 
     public Double getTotalPrice() { return totalPrice; }
     public void setTotalPrice(Double totalPrice) { this.totalPrice = totalPrice; }
