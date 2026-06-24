@@ -20,6 +20,7 @@ public class ProductOrder {
     private Product product;
 
     private Integer quantity;
+    @Column(name = "total_amount")
     private Double totalPrice;
 
     @Column(columnDefinition = "TEXT")
