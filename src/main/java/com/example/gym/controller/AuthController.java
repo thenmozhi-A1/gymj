@@ -76,10 +76,10 @@ public class AuthController {
             refreshTokenRepository.save(rt);
 
             ResponseCookie jwtCookie = ResponseCookie.from("accessToken", accessToken)
-                    .httpOnly(true).secure(false).sameSite("Lax").path("/").maxAge(15 * 60).build();
+                    .httpOnly(true).secure(false).sameSite("Lax").path("/").maxAge(365 * 24 * 60 * 60).build();
                     
             ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", rawRefreshToken)
-                    .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(30 * 24 * 60 * 60).build();
+                    .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(365 * 24 * 60 * 60).build();
 
             Map<String, Object> response = new HashMap<>();
             response.put("user", Map.of(
@@ -133,10 +133,10 @@ public class AuthController {
         refreshTokenRepository.save(newToken);
 
         ResponseCookie jwtCookie = ResponseCookie.from("accessToken", newAccessToken)
-                .httpOnly(true).secure(false).sameSite("Lax").path("/").maxAge(15 * 60).build();
+                .httpOnly(true).secure(false).sameSite("Lax").path("/").maxAge(365 * 24 * 60 * 60).build();
                 
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", newRawRefreshToken)
-                .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(30 * 24 * 60 * 60).build();
+                .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(365 * 24 * 60 * 60).build();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
