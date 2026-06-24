@@ -23,6 +23,8 @@ public class MembershipPlan {
     @Column(name = "feature")
     private List<String> features;
 
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
     private String imageUrl;
     private String accentColor;
     private Double rating;
