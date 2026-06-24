@@ -34,6 +34,9 @@ public class ProductOrderController {
         if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
             return ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
         }
+        if (principal instanceof User) {
+            return ((User) principal).getEmail();
+        }
         return principal.toString();
     }
 

@@ -59,7 +59,11 @@ public class JwtTokenProvider {
     }
 
     public Long extractTokenVersion(String token) {
-        return getClaims(token).get("tokenVersion", Long.class);
+        Object version = getClaims(token).get("tokenVersion");
+        if (version instanceof Number) {
+            return ((Number) version).longValue();
+        }
+        return 0L;
     }
 
     private Claims getClaims(String token) {
