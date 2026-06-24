@@ -86,6 +86,22 @@ public class ProductOrderController {
                 .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<?> getUserOrders(@PathVariable("userId") Long userId) {
+        try {
+            String email = currentUserEmail();
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user == null || !user.getId().equals(userId)) {
+                return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+            }
+            List<ProductOrderDTO> orders = productOrderRepository.findByUserIdOrderByOrderDateDesc(userId)
+                    .stream().map(this::mapToDTO).collect(Collectors.toList());
+            return ResponseEntity.ok(orders);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable("id") Long id, @RequestBody Map<String, String> payload) {
         return productOrderRepository.findById(id).map(order -> {
