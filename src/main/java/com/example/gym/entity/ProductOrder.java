@@ -26,6 +26,7 @@ public class ProductOrder {
     private String shippingAddress;
 
     private String razorpayPaymentId;
+    @Column(name = "order_status")
     private String status; // PENDING, PAID, SHIPPED, DELIVERED
     
     private LocalDateTime orderDate;
