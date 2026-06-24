@@ -52,6 +52,12 @@ public class ProductOrderController {
             Long productId = Long.valueOf(payload.get("productId").toString());
             Integer quantity = Integer.valueOf(payload.getOrDefault("quantity", 1).toString());
             String shippingAddress = payload.getOrDefault("shippingAddress", "").toString();
+            if (shippingAddress.trim().isEmpty() && user.getAddress() != null && !user.getAddress().trim().isEmpty()) {
+                shippingAddress = user.getAddress();
+            }
+            if (shippingAddress.trim().isEmpty()) {
+                shippingAddress = "N/A";
+            }
             String paymentId = payload.getOrDefault("razorpayPaymentId", "").toString();
 
             Product product = productRepository.findById(productId).orElse(null);
