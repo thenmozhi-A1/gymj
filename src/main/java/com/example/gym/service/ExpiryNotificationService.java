@@ -116,7 +116,18 @@ public class ExpiryNotificationService {
         String recipientName  = user.getFullName() != null ? user.getFullName() : "Member";
         String recipientEmail = user.getEmail();
         
-        LocalDateTime expiryDateObj = user.getExpiryDate() != null ? user.getExpiryDate() : LocalDateTime.now();
+        LocalDateTime expiryDateObj = LocalDateTime.now();
+        if (user.getExpiryDate() != null) {
+            try {
+                if (user.getExpiryDate().contains("T")) {
+                    expiryDateObj = LocalDateTime.parse(user.getExpiryDate());
+                } else {
+                    expiryDateObj = java.time.LocalDate.parse(user.getExpiryDate()).atStartOfDay();
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse expiry date: " + user.getExpiryDate(), e);
+            }
+        }
         String expiryDate     = expiryDateObj.format(DISPLAY_FMT);
         String planName       = user.getMembershipPlan() != null ? user.getMembershipPlan() : "Gym Membership";
         String gymName        = settings.getGymName();
