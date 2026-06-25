@@ -112,6 +112,28 @@ public class ExpiryNotificationService {
 
     // ── Email composition ─────────────────────────────────────────────────────
 
+    public void sendManualReminder(User user) throws Exception {
+        String recipientName  = user.getFullName() != null ? user.getFullName() : "Member";
+        String recipientEmail = user.getEmail();
+        
+        LocalDateTime expiryDateObj = user.getExpiryDate() != null ? user.getExpiryDate() : LocalDateTime.now();
+        String expiryDate     = expiryDateObj.format(DISPLAY_FMT);
+        String planName       = user.getMembershipPlan() != null ? user.getMembershipPlan() : "Gym Membership";
+        String gymName        = settings.getGymName();
+        int    daysLeft       = (int) java.time.temporal.ChronoUnit.DAYS.between(
+                                    LocalDateTime.now(), expiryDateObj);
+
+        MimeMessage msg = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
+
+        helper.setFrom(settings.getFromEmail(), gymName);
+        helper.setTo(recipientEmail);
+        helper.setSubject("⏰ Your " + gymName + " membership expires in " + daysLeft + " day" + (daysLeft == 1 ? "" : "s"));
+        helper.setText(buildHtml(recipientName, planName, expiryDate, daysLeft, gymName), true);
+
+        mailSender.send(msg);
+    }
+
     private void sendReminderEmail(User user, Payment payment) throws Exception {
         String recipientName  = user.getFullName() != null ? user.getFullName() : "Member";
         String recipientEmail = user.getEmail();

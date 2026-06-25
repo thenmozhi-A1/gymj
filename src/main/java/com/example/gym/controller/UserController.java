@@ -5,6 +5,7 @@ import com.example.gym.entity.User;
 import com.example.gym.service.UserService;
 import com.example.gym.service.NotificationService;
 import com.example.gym.service.AuditLogService;
+import com.example.gym.service.ExpiryNotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -20,11 +21,13 @@ public class UserController {
     private final UserService userService;
     private final NotificationService notificationService;
     private final AuditLogService auditLogService;
+    private final ExpiryNotificationService expiryNotificationService;
 
-    public UserController(UserService userService, NotificationService notificationService, AuditLogService auditLogService) {
+    public UserController(UserService userService, NotificationService notificationService, AuditLogService auditLogService, ExpiryNotificationService expiryNotificationService) {
         this.userService = userService;
         this.notificationService = notificationService;
         this.auditLogService = auditLogService;
+        this.expiryNotificationService = expiryNotificationService;
     }
 
     private String currentAdminEmail() {
@@ -95,6 +98,20 @@ public class UserController {
 
 
 
+    /** POST /api/users/{id}/send-reminder — Send expiry reminder manually */
+    @PostMapping("/{id}/send-reminder")
+    public ResponseEntity<?> sendReminder(@PathVariable("id") Long id) {
+        try {
+            User user = userService.getUserById(id);
+            if (user == null || user.getEmail() == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "User or email not found"));
+            }
+            expiryNotificationService.sendManualReminder(user);
+            return ResponseEntity.ok(Map.of("message", "Reminder sent successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to send reminder: " + e.getMessage()));
+        }
+    }
 
     /** GET /api/users — Get all users (admin) */
     @GetMapping
