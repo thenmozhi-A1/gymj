@@ -11,11 +11,6 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.web.client.RestTemplate;
 import java.util.Map;
 
 import java.time.LocalDateTime;
@@ -47,9 +42,6 @@ public class ExpiryNotificationService {
     private final PaymentRepository paymentRepository;
     private final JavaMailSender mailSender;
     private final NotificationSettings settings;
-
-    @Value("${spring.mail.password:}")
-    private String resendApiKey;
 
     public ExpiryNotificationService(PaymentRepository paymentRepository,
                                      JavaMailSender mailSender,
@@ -143,10 +135,15 @@ public class ExpiryNotificationService {
         int    daysLeft       = (int) java.time.temporal.ChronoUnit.DAYS.between(
                                     LocalDateTime.now(), expiryDateObj);
 
-        String subject = "⏰ Your " + gymName + " membership expires in " + daysLeft + " day" + (daysLeft == 1 ? "" : "s");
-        String htmlBody = buildHtml(recipientName, planName, expiryDate, daysLeft, gymName);
+        MimeMessage msg = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
 
-        sendViaResendApi(recipientEmail, subject, htmlBody);
+        helper.setFrom(settings.getFromEmail(), gymName);
+        helper.setTo(recipientEmail);
+        helper.setSubject("⏰ Your " + gymName + " membership expires in " + daysLeft + " day" + (daysLeft == 1 ? "" : "s"));
+        helper.setText(buildHtml(recipientName, planName, expiryDate, daysLeft, gymName), true);
+
+        mailSender.send(msg);
     }
 
     private void sendReminderEmail(User user, Payment payment) throws Exception {
@@ -158,27 +155,15 @@ public class ExpiryNotificationService {
         int    daysLeft       = (int) java.time.temporal.ChronoUnit.DAYS.between(
                                     LocalDateTime.now(), payment.getPlanEndDate());
 
-        String subject = "⏰ Your " + gymName + " membership expires in " + daysLeft + " day" + (daysLeft == 1 ? "" : "s");
-        String htmlBody = buildHtml(recipientName, planName, expiryDate, daysLeft, gymName);
+        MimeMessage msg = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
 
-        sendViaResendApi(recipientEmail, subject, htmlBody);
-    }
+        helper.setFrom(settings.getFromEmail(), gymName);
+        helper.setTo(recipientEmail);
+        helper.setSubject("⏰ Your " + gymName + " membership expires in " + daysLeft + " day" + (daysLeft == 1 ? "" : "s"));
+        helper.setText(buildHtml(recipientName, planName, expiryDate, daysLeft, gymName), true);
 
-    private void sendViaResendApi(String to, String subject, String htmlBody) throws Exception {
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(resendApiKey);
-
-        Map<String, Object> request = Map.of(
-            "from", settings.getGymName() + " <" + settings.getFromEmail() + ">",
-            "to", List.of(to),
-            "subject", subject,
-            "html", htmlBody
-        );
-
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
-        restTemplate.postForObject("https://api.resend.com/emails", entity, String.class);
+        mailSender.send(msg);
     }
 
     private String buildHtml(String name, String plan, String expiryDate, int daysLeft, String gymName) {
