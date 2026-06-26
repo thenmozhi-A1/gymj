@@ -53,7 +53,7 @@ public class WhatsAppService {
     public void sendTextMessage(String to, String text) {
         if (!config.isEnabled()) {
             log.info("[WhatsApp] Disabled — skipping text message to {}", maskPhone(to));
-            return;
+            throw new IllegalStateException("WhatsApp integration is disabled in settings.");
         }
 
         String normalisedTo = normalisePhone(to);
@@ -82,7 +82,7 @@ public class WhatsAppService {
                                     String languageCode, List<String> parameters) {
         if (!config.isEnabled()) {
             log.info("[WhatsApp] Disabled — skipping template '{}' to {}", templateName, maskPhone(to));
-            return;
+            throw new IllegalStateException("WhatsApp integration is disabled in settings.");
         }
 
         String normalisedTo = normalisePhone(to);
@@ -115,7 +115,7 @@ public class WhatsAppService {
     public void sendExpiryReminder(User user, String planName, String expiryDate, int daysLeft) {
         if (user.getPhone() == null || user.getPhone().isBlank()) {
             log.debug("[WhatsApp] No phone number for user {} — skipping", user.getId());
-            return;
+            throw new IllegalArgumentException("User has no phone number");
         }
 
         String recipientName = user.getFullName() != null ? user.getFullName() : "Member";
@@ -149,6 +149,7 @@ public class WhatsAppService {
             log.info("[WhatsApp] {} sent to {}. Status: {}", label, maskPhone(to), response.getStatusCode());
         } catch (Exception e) {
             log.error("[WhatsApp] Failed to send {} to {}: {}", label, maskPhone(to), e.getMessage());
+            throw new RuntimeException("API error: " + e.getMessage(), e);
         }
     }
 
