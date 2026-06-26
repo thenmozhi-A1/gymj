@@ -98,16 +98,35 @@ public class UserController {
 
 
 
-    /** POST /api/users/{id}/send-reminder — Send expiry reminder manually */
+    /** POST /api/users/{id}/send-reminder — Send expiry reminder via email + WhatsApp */
     @PostMapping("/{id}/send-reminder")
     public ResponseEntity<?> sendReminder(@PathVariable("id") Long id) {
         try {
             User user = userService.getUserById(id);
-            if (user == null || user.getEmail() == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "User or email not found"));
+            if (user == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
             }
-            expiryNotificationService.sendManualReminder(user);
-            return ResponseEntity.ok(Map.of("message", "Reminder sent successfully"));
+            if ((user.getEmail() == null || user.getEmail().isBlank())
+                    && (user.getPhone() == null || user.getPhone().isBlank())) {
+                return ResponseEntity.badRequest().body(Map.of("error", "User has no email or phone number on file"));
+            }
+
+            Map<String, Object> result = expiryNotificationService.sendManualReminder(user);
+            boolean emailSent = (boolean) result.get("emailSent");
+            boolean whatsappSent = (boolean) result.get("whatsappSent");
+
+            if (!emailSent && !whatsappSent) {
+                // Both channels failed
+                return ResponseEntity.status(500).body(result);
+            }
+
+            // At least one channel succeeded
+            StringBuilder msg = new StringBuilder("Reminder sent via: ");
+            if (emailSent) msg.append("📧 Email ");
+            if (whatsappSent) msg.append("💬 WhatsApp ");
+            result.put("message", msg.toString().trim());
+
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", "Failed to send reminder: " + e.getMessage()));
         }

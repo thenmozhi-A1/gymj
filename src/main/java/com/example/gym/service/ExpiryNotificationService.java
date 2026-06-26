@@ -212,11 +212,14 @@ public class ExpiryNotificationService {
         return 0; // count is logged; returning 0 as placeholder
     }
 
-    // ── Email composition ─────────────────────────────────────────────────────
-
-    public void sendManualReminder(User user) throws Exception {
+    /**
+     * Sends a manual reminder via both email and WhatsApp.
+     * Each channel is independent — if email fails, WhatsApp still sends and vice versa.
+     *
+     * @return a result map with keys: emailSent, whatsappSent, errors
+     */
+    public Map<String, Object> sendManualReminder(User user) {
         String recipientName  = user.getFullName() != null ? user.getFullName() : "Member";
-        String recipientEmail = user.getEmail();
         
         LocalDateTime expiryDateObj = LocalDateTime.now();
         if (user.getExpiryDate() != null) {
@@ -236,22 +239,47 @@ public class ExpiryNotificationService {
         int    daysLeft       = (int) java.time.temporal.ChronoUnit.DAYS.between(
                                     LocalDateTime.now(), expiryDateObj);
 
-        MimeMessage msg = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
+        boolean emailSent = false;
+        boolean whatsappSent = false;
+        java.util.ArrayList<String> errors = new java.util.ArrayList<>();
 
-        helper.setFrom(settings.getFromEmail(), gymName);
-        helper.setTo(recipientEmail);
-        helper.setSubject("⏰ Your " + gymName + " membership expires in " + daysLeft + " day" + (daysLeft == 1 ? "" : "s"));
-        helper.setText(buildHtml(recipientName, planName, expiryDate, daysLeft, gymName), true);
+        // ── Try Email ─────────────────────────────────────────────────────────
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            try {
+                MimeMessage msg = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
 
-        mailSender.send(msg);
+                helper.setFrom(settings.getFromEmail(), gymName);
+                helper.setTo(user.getEmail());
+                helper.setSubject("⏰ Your " + gymName + " membership expires in " + daysLeft + " day" + (daysLeft == 1 ? "" : "s"));
+                helper.setText(buildHtml(recipientName, planName, expiryDate, daysLeft, gymName), true);
 
-        // Also send WhatsApp reminder — failure won't affect email
-        try {
-            whatsAppService.sendExpiryReminder(user, planName, expiryDate, daysLeft);
-        } catch (Exception e) {
-            log.error("[ManualReminder] WhatsApp send failed for user {}: {}", user.getId(), e.getMessage());
+                mailSender.send(msg);
+                emailSent = true;
+                log.info("[ManualReminder] Email sent to {}", user.getEmail());
+            } catch (Exception e) {
+                log.error("[ManualReminder] Email failed for {}: {}", user.getEmail(), e.getMessage());
+                errors.add("Email failed: " + e.getMessage());
+            }
         }
+
+        // ── Try WhatsApp ──────────────────────────────────────────────────────
+        if (user.getPhone() != null && !user.getPhone().isBlank()) {
+            try {
+                whatsAppService.sendExpiryReminder(user, planName, expiryDate, daysLeft);
+                whatsappSent = true;
+                log.info("[ManualReminder] WhatsApp sent to user {}", user.getId());
+            } catch (Exception e) {
+                log.error("[ManualReminder] WhatsApp failed for user {}: {}", user.getId(), e.getMessage());
+                errors.add("WhatsApp failed: " + e.getMessage());
+            }
+        }
+
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("emailSent", emailSent);
+        result.put("whatsappSent", whatsappSent);
+        result.put("errors", errors);
+        return result;
     }
 
     private void sendReminderEmail(User user, Payment payment) throws Exception {
