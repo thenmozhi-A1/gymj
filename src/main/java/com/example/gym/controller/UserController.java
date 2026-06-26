@@ -98,7 +98,7 @@ public class UserController {
 
 
 
-    /** POST /api/users/{id}/send-reminder — Send expiry reminder via email + WhatsApp */
+    /** POST /api/users/{id}/send-reminder — Send expiry reminder via WhatsApp */
     @PostMapping("/{id}/send-reminder")
     public ResponseEntity<?> sendReminder(@PathVariable("id") Long id) {
         try {
@@ -112,23 +112,17 @@ public class UserController {
             }
 
             Map<String, Object> result = expiryNotificationService.sendManualReminder(user);
-            boolean emailSent = (boolean) result.get("emailSent");
             boolean whatsappSent = (boolean) result.get("whatsappSent");
 
-            if (!emailSent && !whatsappSent) {
-                // Both channels failed
+            if (!whatsappSent) {
+                // WhatsApp failed
                 return ResponseEntity.status(500).body(result);
             }
 
-            // At least one channel succeeded
-            StringBuilder msg = new StringBuilder("Reminder sent via: ");
-            if (emailSent) msg.append("📧 Email ");
-            if (whatsappSent) msg.append("💬 WhatsApp ");
-            result.put("message", msg.toString().trim());
-
+            result.put("message", "Reminder sent via: 💬 WhatsApp");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", "Failed to send reminder: " + e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to send WhatsApp reminder: " + e.getMessage()));
         }
     }
 
