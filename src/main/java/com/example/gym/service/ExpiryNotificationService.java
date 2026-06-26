@@ -4,6 +4,7 @@ import com.example.gym.config.NotificationSettings;
 import com.example.gym.entity.Payment;
 import com.example.gym.entity.User;
 import com.example.gym.repository.PaymentRepository;
+import com.example.gym.repository.UserRepository;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,16 +23,15 @@ import java.util.Set;
 /**
  * ExpiryNotificationService
  *
- * Runs once daily at 08:00 and scans all payments whose planEndDate falls
- * within the configured window (default 7 days). For each unique member in that
- * set, it sends a branded HTML email reminder.
+ * Runs once daily at 08:00 and scans BOTH the Users table (user.expiryDate)
+ * and the Payments table (payment.planEndDate) for memberships expiring within
+ * the configured window (default 7 days). Sends both email and WhatsApp reminders.
  *
  * The job is controlled by gym.notifications.enabled:
  *   - false (default) → job runs but skips sending (safe with no SMTP config).
- *   - true            → sends real email; requires SMTP env vars.
+ *   - true            → sends real email + WhatsApp; requires credentials.
  *
- * Idempotent: deduplicates by user ID so a member with multiple plans in the
- * window only gets one email per run.
+ * Idempotent: deduplicates by user ID so a member only gets one notification per run.
  */
 @Service
 public class ExpiryNotificationService {
@@ -40,19 +40,29 @@ public class ExpiryNotificationService {
     private static final DateTimeFormatter DISPLAY_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
     private final PaymentRepository paymentRepository;
+    private final UserRepository userRepository;
     private final JavaMailSender mailSender;
     private final NotificationSettings settings;
+    private final WhatsAppService whatsAppService;
 
     public ExpiryNotificationService(PaymentRepository paymentRepository,
+                                     UserRepository userRepository,
                                      JavaMailSender mailSender,
-                                     NotificationSettings settings) {
+                                     NotificationSettings settings,
+                                     WhatsAppService whatsAppService) {
         this.paymentRepository = paymentRepository;
+        this.userRepository    = userRepository;
         this.mailSender        = mailSender;
         this.settings          = settings;
+        this.whatsAppService   = whatsAppService;
     }
 
     /**
      * Scheduled trigger — runs every day at 08:00 server time.
+     * Scans BOTH the Users table (user.expiryDate) and the Payments table
+     * (payment.planEndDate) for memberships expiring within the configured window.
+     * Sends both email and WhatsApp reminders for each matching member.
+     *
      * Cron: second minute hour day month weekday
      */
     @Scheduled(cron = "0 0 8 * * *")
@@ -63,40 +73,131 @@ public class ExpiryNotificationService {
         }
 
         int daysAhead = settings.getExpiryDaysAhead();
-        LocalDateTime windowStart = LocalDateTime.now();
-        LocalDateTime windowEnd   = windowStart.plusDays(daysAhead);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime windowEnd = now.plusDays(daysAhead);
 
-        log.info("[ExpiryJob] Scanning payments expiring between {} and {} ...",
-                windowStart.toLocalDate(), windowEnd.toLocalDate());
+        log.info("[ExpiryJob] Scanning memberships expiring between {} and {} ...",
+                now.toLocalDate(), windowEnd.toLocalDate());
 
+        // Track notified users to avoid duplicates across both scans
+        Set<Long> notified = new HashSet<>();
+        int emailsSent = 0;
+        int whatsappSent = 0;
+
+        // ── Pass 1: Scan Users table (user.expiryDate field) ──────────────────
+        List<User> allUsers = userRepository.findAll();
+        for (User user : allUsers) {
+            if (user.getId() == null || user.getExpiryDate() == null || user.getExpiryDate().isBlank()) continue;
+            if (notified.contains(user.getId())) continue;
+
+            try {
+                LocalDateTime expiryDateObj = parseExpiryDate(user.getExpiryDate());
+                if (expiryDateObj == null) continue;
+
+                // Check if within the notification window
+                if (expiryDateObj.isAfter(now) && expiryDateObj.isBefore(windowEnd)) {
+                    String planName = user.getMembershipPlan() != null ? user.getMembershipPlan() : "Gym Membership";
+                    String expiryDateStr = expiryDateObj.format(DISPLAY_FMT);
+                    int daysLeft = (int) java.time.temporal.ChronoUnit.DAYS.between(now, expiryDateObj);
+
+                    // Send email
+                    try {
+                        sendReminderEmailForUser(user, planName, expiryDateStr, daysLeft);
+                        emailsSent++;
+                        log.info("[ExpiryJob] Email sent to {} (expires {})", user.getEmail(), expiryDateObj.toLocalDate());
+                    } catch (Exception e) {
+                        log.error("[ExpiryJob] Email failed for {}: {}", user.getEmail(), e.getMessage());
+                    }
+
+                    // Send WhatsApp — independent of email success
+                    try {
+                        whatsAppService.sendExpiryReminder(user, planName, expiryDateStr, daysLeft);
+                        whatsappSent++;
+                    } catch (Exception e) {
+                        log.error("[ExpiryJob] WhatsApp failed for user {}: {}", user.getId(), e.getMessage());
+                    }
+
+                    notified.add(user.getId());
+                }
+            } catch (Exception e) {
+                log.warn("[ExpiryJob] Error processing user {}: {}", user.getId(), e.getMessage());
+            }
+        }
+
+        // ── Pass 2: Scan Payments table (for users not caught in Pass 1) ──────
         List<Payment> expiringPayments = paymentRepository.findAll().stream()
                 .filter(p -> p.getPlanEndDate() != null
-                          && p.getPlanEndDate().isAfter(windowStart)
+                          && p.getPlanEndDate().isAfter(now)
                           && p.getPlanEndDate().isBefore(windowEnd)
                           && "SUCCESS".equalsIgnoreCase(p.getPaymentStatus()))
                 .toList();
 
-        // Deduplicate — one email per user even if they have multiple plans expiring
-        Set<Long> notified = new HashSet<>();
-        int sent = 0;
-
         for (Payment payment : expiringPayments) {
             User user = payment.getUser();
             if (user == null || user.getId() == null) continue;
-            if (notified.contains(user.getId()))       continue;
+            if (notified.contains(user.getId())) continue;
 
+            String planName = payment.getPlanName() != null ? payment.getPlanName() : "Gym Membership";
+            String expiryDate = payment.getPlanEndDate().format(DISPLAY_FMT);
+            int daysLeft = (int) java.time.temporal.ChronoUnit.DAYS.between(now, payment.getPlanEndDate());
+
+            // Send email
             try {
                 sendReminderEmail(user, payment);
-                notified.add(user.getId());
-                sent++;
-                log.info("[ExpiryJob] Sent reminder to {} (expires {})",
+                emailsSent++;
+                log.info("[ExpiryJob] Email sent to {} via payment (expires {})",
                         user.getEmail(), payment.getPlanEndDate().toLocalDate());
             } catch (Exception e) {
-                log.error("[ExpiryJob] Failed to send email to {}: {}", user.getEmail(), e.getMessage());
+                log.error("[ExpiryJob] Email failed for {}: {}", user.getEmail(), e.getMessage());
             }
+
+            // Send WhatsApp — independent of email success
+            try {
+                whatsAppService.sendExpiryReminder(user, planName, expiryDate, daysLeft);
+                whatsappSent++;
+            } catch (Exception e) {
+                log.error("[ExpiryJob] WhatsApp failed for user {}: {}", user.getId(), e.getMessage());
+            }
+
+            notified.add(user.getId());
         }
 
-        log.info("[ExpiryJob] Done. Sent {} reminder(s) for {} expiring payment(s).", sent, expiringPayments.size());
+        log.info("[ExpiryJob] Done. Notified {} member(s) — {} email(s), {} WhatsApp message(s).",
+                notified.size(), emailsSent, whatsappSent);
+    }
+
+    /**
+     * Parses the user's expiryDate string (can be "2025-07-01" or "2025-07-01T00:00:00").
+     */
+    private LocalDateTime parseExpiryDate(String dateStr) {
+        try {
+            if (dateStr.contains("T")) {
+                return LocalDateTime.parse(dateStr);
+            } else {
+                return java.time.LocalDate.parse(dateStr).atStartOfDay();
+            }
+        } catch (Exception e) {
+            log.warn("[ExpiryJob] Cannot parse expiry date '{}': {}", dateStr, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Sends a branded HTML email reminder using data from the User entity directly.
+     */
+    private void sendReminderEmailForUser(User user, String planName, String expiryDate, int daysLeft) throws Exception {
+        String recipientName = user.getFullName() != null ? user.getFullName() : "Member";
+        String gymName = settings.getGymName();
+
+        MimeMessage msg = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(msg, true, "UTF-8");
+
+        helper.setFrom(settings.getFromEmail(), gymName);
+        helper.setTo(user.getEmail());
+        helper.setSubject("⏰ Your " + gymName + " membership expires in " + daysLeft + " day" + (daysLeft == 1 ? "" : "s"));
+        helper.setText(buildHtml(recipientName, planName, expiryDate, daysLeft, gymName), true);
+
+        mailSender.send(msg);
     }
 
     /**
@@ -144,6 +245,13 @@ public class ExpiryNotificationService {
         helper.setText(buildHtml(recipientName, planName, expiryDate, daysLeft, gymName), true);
 
         mailSender.send(msg);
+
+        // Also send WhatsApp reminder — failure won't affect email
+        try {
+            whatsAppService.sendExpiryReminder(user, planName, expiryDate, daysLeft);
+        } catch (Exception e) {
+            log.error("[ManualReminder] WhatsApp send failed for user {}: {}", user.getId(), e.getMessage());
+        }
     }
 
     private void sendReminderEmail(User user, Payment payment) throws Exception {
