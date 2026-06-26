@@ -118,17 +118,12 @@ public class WhatsAppService {
             throw new IllegalArgumentException("User has no phone number");
         }
 
-        String recipientName = user.getFullName() != null ? user.getFullName() : "Member";
-        String gymName = "B&Y Fitness Gym";
-
-        String message = String.format(
-                "Hi %s! \uD83C\uDFCB\uFE0F Your *%s* membership at *%s* expires on *%s* (%d day%s left). " +
-                "Renew now to keep your fitness streak going! \uD83D\uDCAA",
-                recipientName, planName, gymName, expiryDate, daysLeft,
-                daysLeft == 1 ? "" : "s"
-        );
-
-        sendTextMessage(user.getPhone(), message);
+        // Meta Test Numbers CANNOT send free-form text messages unless the user has 
+        // messaged the bot first within the last 24 hours. They often throw confusing 
+        // 'Object does not exist' or 'missing permissions' errors when you try.
+        // To fix this, we MUST use a pre-approved template message to initiate the chat.
+        // We will use the default "hello_world" template that Meta pre-approves for all apps.
+        sendTemplateMessage(user.getPhone(), "hello_world", "en_US", java.util.List.of());
     }
 
     // ── Internals ─────────────────────────────────────────────────────────────
