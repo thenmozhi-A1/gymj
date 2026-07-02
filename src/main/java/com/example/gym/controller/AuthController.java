@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.gym.entity.PasswordResetToken;
 import com.example.gym.repository.PasswordResetTokenRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -40,14 +42,16 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JavaMailSender mailSender;
 
-    public AuthController(UserService userService, JwtTokenProvider tokenProvider, RefreshTokenRepository refreshTokenRepository, UserRepository userRepository, PasswordResetTokenRepository passwordResetTokenRepository, PasswordEncoder passwordEncoder) {
+    public AuthController(UserService userService, JwtTokenProvider tokenProvider, RefreshTokenRepository refreshTokenRepository, UserRepository userRepository, PasswordResetTokenRepository passwordResetTokenRepository, PasswordEncoder passwordEncoder, JavaMailSender mailSender) {
         this.userService = userService;
         this.tokenProvider = tokenProvider;
         this.refreshTokenRepository = refreshTokenRepository;
         this.userRepository = userRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.passwordEncoder = passwordEncoder;
+        this.mailSender = mailSender;
     }
 
     @PostMapping("/login")
@@ -225,10 +229,22 @@ public class AuthController {
             PasswordResetToken prt = new PasswordResetToken(user, hashedOtp, LocalDateTime.now().plusMinutes(15));
             passwordResetTokenRepository.save(prt);
 
-            // LOGGING THE OTP SINCE NO SMTP SERVER IS PROVIDED
+            // LOGGING THE OTP
             System.out.println("==========================================");
             System.out.println("PASSWORD RESET OTP FOR " + email + ": " + otp);
             System.out.println("==========================================");
+
+            // Send Email using JavaMailSender
+            try {
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setTo(email);
+                message.setSubject("Password Reset OTP - B&Y Fitness Gym");
+                message.setText("Your password reset OTP is: " + otp + "\n\nThis OTP is valid for 15 minutes. Please do not share it with anyone.");
+                mailSender.send(message);
+                System.out.println("Email sent successfully to " + email);
+            } catch (Exception e) {
+                System.err.println("Failed to send OTP email: " + e.getMessage());
+            }
         }
 
         // Always return success to prevent email enumeration
