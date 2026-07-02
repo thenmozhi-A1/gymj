@@ -240,35 +240,11 @@ public class AuthController {
             System.out.println("==========================================");
 
             // Send Email using EmailJS REST API
-            try {
-                RestTemplate restTemplate = new RestTemplate();
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.APPLICATION_JSON);
-
-                Map<String, Object> templateParams = new HashMap<>();
-                templateParams.put("email", email);
-                templateParams.put("passcode", otp);
-                
-                // Keep these just in case they are used elsewhere
-                templateParams.put("to_name", user.getFullName() != null ? user.getFullName() : "Member");
-                templateParams.put("to_email", email);
-                templateParams.put("otp", otp); 
-                templateParams.put("message", otp);
-
-                Map<String, Object> body = new HashMap<>();
-                // Fallback to the hardcoded keys if environment variables are missing
-                body.put("service_id", System.getenv("Service_ID") != null ? System.getenv("Service_ID") : "service_uiq49df");
-                body.put("template_id", System.getenv("TEMPLATE_ID_FORGOT_PASSWORD") != null ? System.getenv("TEMPLATE_ID_FORGOT_PASSWORD") : "template_e2pxpww"); 
-                body.put("user_id", System.getenv("Public_Key") != null ? System.getenv("Public_Key") : "FgA_6_AkuJW7B2crn");
-                body.put("template_params", templateParams);
-
-                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
-
-                restTemplate.postForEntity("https://api.emailjs.com/api/v1.0/email/send", entity, String.class);
-                System.out.println("EmailJS OTP sent successfully to " + email);
-            } catch (Exception e) {
-                System.err.println("Failed to send OTP via EmailJS: " + e.getMessage());
-            }
+            // Return the OTP in the JSON response so the frontend can send the email via EmailJS
+            return ResponseEntity.ok(Map.of(
+                "message", "If that email is registered, you will receive a reset code shortly.",
+                "otp", otp
+            ));
         }
 
         // Always return success to prevent email enumeration
