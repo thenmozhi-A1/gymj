@@ -18,8 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.gym.entity.PasswordResetToken;
 import com.example.gym.repository.PasswordResetTokenRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -42,16 +44,16 @@ public class AuthController {
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JavaMailSender mailSender;
 
-    public AuthController(UserService userService, JwtTokenProvider tokenProvider, RefreshTokenRepository refreshTokenRepository, UserRepository userRepository, PasswordResetTokenRepository passwordResetTokenRepository, PasswordEncoder passwordEncoder, JavaMailSender mailSender) {
+    public AuthController(UserService userService, JwtTokenProvider tokenProvider,
+            RefreshTokenRepository refreshTokenRepository, UserRepository userRepository,
+            PasswordResetTokenRepository passwordResetTokenRepository, PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.tokenProvider = tokenProvider;
         this.refreshTokenRepository = refreshTokenRepository;
         this.userRepository = userRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.passwordEncoder = passwordEncoder;
-        this.mailSender = mailSender;
     }
 
     @PostMapping("/login")
@@ -64,26 +66,27 @@ public class AuthController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Email and password are required"));
             }
 
-            // Using existing UserService to handle login (also seamless BCrypt migration handled inside UserService)
+            // Using existing UserService to handle login (also seamless BCrypt migration
+            // handled inside UserService)
             User user = userService.loginUser(email, password);
 
             String accessToken = tokenProvider.generateAccessToken(user);
             String rawRefreshToken = tokenProvider.generateRefreshToken();
-            
+
             // Store hashed refresh token
             RefreshToken rt = new RefreshToken(
-                    user, 
-                    hashToken(rawRefreshToken), 
-                    LocalDateTime.now().plus(30, ChronoUnit.DAYS), 
-                    "Unknown Device"
-            );
+                    user,
+                    hashToken(rawRefreshToken),
+                    LocalDateTime.now().plus(30, ChronoUnit.DAYS),
+                    "Unknown Device");
             refreshTokenRepository.save(rt);
 
             ResponseCookie jwtCookie = ResponseCookie.from("accessToken", accessToken)
                     .httpOnly(true).secure(false).sameSite("Lax").path("/").maxAge(365 * 24 * 60 * 60).build();
-                    
+
             ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", rawRefreshToken)
-                    .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(365 * 24 * 60 * 60).build();
+                    .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(365 * 24 * 60 * 60)
+                    .build();
 
             Map<String, Object> response = new HashMap<>();
             response.put("user", Map.of(
@@ -91,8 +94,7 @@ public class AuthController {
                     "name", user.getFullName(),
                     "email", user.getEmail(),
                     "role", user.getRole(),
-                    "mustChangePassword", user.getMustChangePassword() != null ? user.getMustChangePassword() : false
-            ));
+                    "mustChangePassword", user.getMustChangePassword() != null ? user.getMustChangePassword() : false));
 
             response.put("accessToken", accessToken);
             response.put("refreshToken", rawRefreshToken);
@@ -107,15 +109,19 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(@CookieValue(value = "refreshToken", required = false) String cookieRefreshToken, @RequestBody(required = false) Map<String, String> requestBody) {
-        String rawRefreshToken = cookieRefreshToken != null ? cookieRefreshToken : (requestBody != null ? requestBody.get("refreshToken") : null);
-        if (rawRefreshToken == null) return ResponseEntity.badRequest().body(Map.of("error", "Refresh token required"));
+    public ResponseEntity<?> refresh(@CookieValue(value = "refreshToken", required = false) String cookieRefreshToken,
+            @RequestBody(required = false) Map<String, String> requestBody) {
+        String rawRefreshToken = cookieRefreshToken != null ? cookieRefreshToken
+                : (requestBody != null ? requestBody.get("refreshToken") : null);
+        if (rawRefreshToken == null)
+            return ResponseEntity.badRequest().body(Map.of("error", "Refresh token required"));
 
         String hash = hashToken(rawRefreshToken);
         Optional<RefreshToken> rtOpt = refreshTokenRepository.findByTokenHash(hash);
 
         if (rtOpt.isEmpty() || rtOpt.get().isRevoked() || rtOpt.get().getExpiresAt().isBefore(LocalDateTime.now())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid, expired, or revoked refresh token"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid, expired, or revoked refresh token"));
         }
 
         RefreshToken oldToken = rtOpt.get();
@@ -132,24 +138,23 @@ public class AuthController {
                 user,
                 hashToken(newRawRefreshToken),
                 LocalDateTime.now().plus(30, ChronoUnit.DAYS),
-                oldToken.getDeviceInfo()
-        );
+                oldToken.getDeviceInfo());
         refreshTokenRepository.save(newToken);
 
         ResponseCookie jwtCookie = ResponseCookie.from("accessToken", newAccessToken)
                 .httpOnly(true).secure(false).sameSite("Lax").path("/").maxAge(365 * 24 * 60 * 60).build();
-                
+
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", newRawRefreshToken)
-                .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(365 * 24 * 60 * 60).build();
+                .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(365 * 24 * 60 * 60)
+                .build();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
                 .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                 .body(Map.of(
-                    "message", "Token refreshed successfully",
-                    "accessToken", newAccessToken,
-                    "refreshToken", newRawRefreshToken
-                ));
+                        "message", "Token refreshed successfully",
+                        "accessToken", newAccessToken,
+                        "refreshToken", newRawRefreshToken));
     }
 
     @PostMapping("/logout")
@@ -162,12 +167,12 @@ public class AuthController {
                 refreshTokenRepository.save(rt);
             });
         }
-        
+
         ResponseCookie clearJwt = ResponseCookie.from("accessToken", "")
                 .httpOnly(true).secure(false).sameSite("Lax").path("/").maxAge(0).build();
         ResponseCookie clearRefresh = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true).secure(false).sameSite("Lax").path("/api/auth/refresh").maxAge(0).build();
-                
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, clearJwt.toString())
                 .header(HttpHeaders.SET_COOKIE, clearRefresh.toString())
@@ -180,14 +185,13 @@ public class AuthController {
         if (auth == null || !auth.isAuthenticated() || auth.getPrincipal() instanceof String) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
         }
-        
+
         User virtualUser = (User) auth.getPrincipal();
         return ResponseEntity.ok(Map.of(
                 "id", virtualUser.getId(),
                 "name", virtualUser.getFullName(),
                 "email", virtualUser.getEmail(),
-                "role", virtualUser.getRole()
-        ));
+                "role", virtualUser.getRole()));
     }
 
     @PostMapping("/change-password")
@@ -217,7 +221,8 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody Map<String, String> request) {
         String email = request.get("email");
-        if (email == null) return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
+        if (email == null)
+            return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
 
         Optional<User> userOpt = userRepository.findByEmail(email);
         if (userOpt.isPresent()) {
@@ -234,17 +239,32 @@ public class AuthController {
             System.out.println("PASSWORD RESET OTP FOR " + email + ": " + otp);
             System.out.println("==========================================");
 
-            // Send Email using JavaMailSender
+            // Send Email using EmailJS REST API
             try {
-                SimpleMailMessage message = new SimpleMailMessage();
-                message.setFrom("honeylanguageilu@gmail.com"); // Added setFrom to prevent MailSendException
-                message.setTo(email);
-                message.setSubject("Password Reset OTP - B&Y Fitness Gym");
-                message.setText("Your password reset OTP is: " + otp + "\n\nThis OTP is valid for 15 minutes. Please do not share it with anyone.");
-                mailSender.send(message);
-                System.out.println("Email sent successfully to " + email);
+                RestTemplate restTemplate = new RestTemplate();
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+
+                Map<String, Object> templateParams = new HashMap<>();
+                templateParams.put("to_email", email);
+                templateParams.put("to_name", user.getFullName() != null ? user.getFullName() : "Member");
+                templateParams.put("otp", otp);
+                templateParams.put("message", otp); // Sending as both 'otp' and 'message' just in case the template
+                                                    // uses either
+
+                Map<String, Object> body = new HashMap<>();
+                // Fallback to the hardcoded keys if environment variables are missing
+                body.put("service_id", System.getenv("Service_ID") != null ? System.getenv("Service_ID") : "service_uiq49df");
+                body.put("template_id", System.getenv("TEMPLATE_ID_FORGOT_PASSWORD")); 
+                body.put("user_id", System.getenv("Public_Key") != null ? System.getenv("Public_Key") : "FgA_6_AkuJW7B2crn");
+                body.put("template_params", templateParams);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+
+                restTemplate.postForEntity("https://api.emailjs.com/api/v1.0/email/send", entity, String.class);
+                System.out.println("EmailJS OTP sent successfully to " + email);
             } catch (Exception e) {
-                System.err.println("Failed to send OTP email: " + e.getMessage());
+                System.err.println("Failed to send OTP via EmailJS: " + e.getMessage());
             }
         }
 
@@ -272,8 +292,8 @@ public class AuthController {
             String hashedOtp = hashToken(otp);
             Optional<PasswordResetToken> tokenOpt = passwordResetTokenRepository.findByTokenHash(hashedOtp);
 
-            if (tokenOpt.isEmpty() || !tokenOpt.get().getUser().getId().equals(user.getId()) 
-                || tokenOpt.get().getUsed() || tokenOpt.get().getExpiresAt().isBefore(LocalDateTime.now())) {
+            if (tokenOpt.isEmpty() || !tokenOpt.get().getUser().getId().equals(user.getId())
+                    || tokenOpt.get().getUsed() || tokenOpt.get().getExpiresAt().isBefore(LocalDateTime.now())) {
                 throw new RuntimeException("Invalid OTP or expired.");
             }
 
@@ -283,7 +303,8 @@ public class AuthController {
 
             Pattern pattern = Pattern.compile("^(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&#])[A-Za-z\\d@$!%*?&#]{8,}$");
             if (!pattern.matcher(newPassword).matches()) {
-                throw new RuntimeException("Password must be at least 8 characters long and contain at least one uppercase letter, one number, and one special character.");
+                throw new RuntimeException(
+                        "Password must be at least 8 characters long and contain at least one uppercase letter, one number, and one special character.");
             }
 
             user.setPassword(passwordEncoder.encode(newPassword));
