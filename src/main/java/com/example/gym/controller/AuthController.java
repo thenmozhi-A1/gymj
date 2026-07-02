@@ -195,6 +195,7 @@ public class AuthController {
     }
 
     @PostMapping("/change-password")
+    @Transactional
     public ResponseEntity<?> changePassword(@RequestBody Map<String, String> request) {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -252,6 +253,7 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
+    @Transactional
     public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
         try {
             String email = request.get("email");
