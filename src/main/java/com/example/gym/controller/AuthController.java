@@ -237,6 +237,7 @@ public class AuthController {
             // Send Email using JavaMailSender
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom("honeylanguageilu@gmail.com"); // Added setFrom to prevent MailSendException
                 message.setTo(email);
                 message.setSubject("Password Reset OTP - B&Y Fitness Gym");
                 message.setText("Your password reset OTP is: " + otp + "\n\nThis OTP is valid for 15 minutes. Please do not share it with anyone.");
