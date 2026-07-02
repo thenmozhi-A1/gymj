@@ -33,7 +33,7 @@ public class SecurityConfig {
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 .requestMatchers("/api/users/login", "/api/users/register").permitAll() // Legacy endpoints
                 .requestMatchers(HttpMethod.GET, "/api/feedbacks").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products").permitAll()
