@@ -258,7 +258,7 @@ public class AuthController {
                 Map<String, Object> body = new HashMap<>();
                 // Fallback to the hardcoded keys if environment variables are missing
                 body.put("service_id", System.getenv("Service_ID") != null ? System.getenv("Service_ID") : "service_uiq49df");
-                body.put("template_id", System.getenv("TEMPLATE_ID_FORGOT_PASSWORD")); 
+                body.put("template_id", System.getenv("TEMPLATE_ID_FORGOT_PASSWORD") != null ? System.getenv("TEMPLATE_ID_FORGOT_PASSWORD") : "template_e2pxpww"); 
                 body.put("user_id", System.getenv("Public_Key") != null ? System.getenv("Public_Key") : "FgA_6_AkuJW7B2crn");
                 body.put("template_params", templateParams);
 
