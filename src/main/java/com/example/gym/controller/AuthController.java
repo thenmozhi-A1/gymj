@@ -246,11 +246,14 @@ public class AuthController {
                 headers.setContentType(MediaType.APPLICATION_JSON);
 
                 Map<String, Object> templateParams = new HashMap<>();
-                templateParams.put("to_email", email);
+                templateParams.put("email", email);
+                templateParams.put("passcode", otp);
+                
+                // Keep these just in case they are used elsewhere
                 templateParams.put("to_name", user.getFullName() != null ? user.getFullName() : "Member");
-                templateParams.put("otp", otp);
-                templateParams.put("message", otp); // Sending as both 'otp' and 'message' just in case the template
-                                                    // uses either
+                templateParams.put("to_email", email);
+                templateParams.put("otp", otp); 
+                templateParams.put("message", otp);
 
                 Map<String, Object> body = new HashMap<>();
                 // Fallback to the hardcoded keys if environment variables are missing
